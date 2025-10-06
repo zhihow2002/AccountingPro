@@ -1,0 +1,123 @@
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">AccountingPro</a>
+        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
+
+<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
+    <nav class="flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="oi oi-home" aria-hidden="true"></span> Dashboard
+            </NavLink>
+        </div>
+        
+        <div class="nav-section">
+            <div class="nav-header">Sales</div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="customers">
+                    <span class="oi oi-people" aria-hidden="true"></span> Customers
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="invoices">
+                    <span class="oi oi-document" aria-hidden="true"></span> Invoices
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="payments">
+                    <span class="oi oi-dollar" aria-hidden="true"></span> Payments Received
+                </NavLink>
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-header">Purchases</div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="suppliers">
+                    <span class="oi oi-briefcase" aria-hidden="true"></span> Suppliers
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="bills">
+                    <span class="oi oi-document" aria-hidden="true"></span> Bills
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="payments-made">
+                    <span class="oi oi-credit-card" aria-hidden="true"></span> Payments Made
+                </NavLink>
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-header">Inventory</div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="products">
+                    <span class="oi oi-box" aria-hidden="true"></span> Products & Services
+                </NavLink>
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-header">Accounting</div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="accounts">
+                    <span class="oi oi-list-rich" aria-hidden="true"></span> Chart of Accounts
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="journal-entries">
+                    <span class="oi oi-plus" aria-hidden="true"></span> Journal Entries
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="bank-accounts">
+                    <span class="oi oi-credit-card" aria-hidden="true"></span> Bank Accounts
+                </NavLink>
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-header">Reports</div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="reports">
+                    <span class="oi oi-bar-chart" aria-hidden="true"></span> Financial Reports
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="dashboard-reports">
+                    <span class="oi oi-dashboard" aria-hidden="true"></span> Analytics
+                </NavLink>
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-header">Settings</div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="taxes">
+                    <span class="oi oi-calculator" aria-hidden="true"></span> Taxes
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="company-settings">
+                    <span class="oi oi-cog" aria-hidden="true"></span> Company
+                </NavLink>
+            </div>
+        </div>
+    </nav>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+}

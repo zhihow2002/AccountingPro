@@ -1,0 +1,355 @@
+@page "/customers"
+@using AccountingPro.Application.DTOs
+@using AccountingPro.Core.Enums
+
+<PageTitle>Customers - AccountingPro</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Customer Management</h1>
+    <button class="btn btn-primary" @onclick="ShowCreateModal">
+        <span class="oi oi-plus"></span> Add Customer
+    </button>
+</div>
+
+<div class="row mb-3">
+    <div class="col-md-4">
+        <input type="text" class="form-control" placeholder="Search customers..." @bind="searchTerm" @oninput="FilterCustomers" />
+    </div>
+    <div class="col-md-2">
+        <select class="form-control" @bind="selectedStatus" >
+            <option value="">All Status</option>
+            <option value="@CustomerStatus.Active">Active</option>
+            <option value="@CustomerStatus.Inactive">Inactive</option>
+            <option value="@CustomerStatus.Blocked">Blocked</option>
+        </select>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>City</th>
+                <th>Credit Limit</th>
+                <th>Outstanding</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (filteredCustomers.Any())
+            {
+                @foreach (var customer in filteredCustomers)
+                {
+                    <tr>
+                        <td>@customer.Name</td>
+                        <td>@customer.Email</td>
+                        <td>@customer.Phone</td>
+                        <td>@customer.City</td>
+                        <td>@customer.CreditLimit.ToString("C")</td>
+                        <td>
+                            <span class="@(customer.OutstandingBalance > 0 ? "text-warning" : "text-success")">
+                                @customer.OutstandingBalance.ToString("C")
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge badge-@GetStatusClass(customer.Status)">
+                                @customer.Status
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => EditCustomer(customer)">
+                                    <span class="oi oi-pencil"></span>
+                                </button>
+                                <button class="btn btn-sm btn-outline-success" @onclick="() => CreateInvoice(customer.Id)">
+                                    <span class="oi oi-document"></span>
+                                </button>
+                                <button class="btn btn-sm btn-outline-info" @onclick="() => ViewStatement(customer.Id)">
+                                    <span class="oi oi-bar-chart"></span>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="8" class="text-center text-muted">No customers found</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Create/Edit Customer Modal -->
+@if (showModal)
+{
+    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(isEditing ? "Edit Customer" : "Add New Customer")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="customerForm" OnValidSubmit="SaveCustomer">
+                        <DataAnnotationsValidator />
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Name *</label>
+                                    <InputText class="form-control" @bind-Value="customerForm.Name" />
+                                    <ValidationMessage For="() => customerForm.Name" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Email</label>
+                                    <InputText class="form-control" @bind-Value="customerForm.Email" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Phone</label>
+                                    <InputText class="form-control" @bind-Value="customerForm.Phone" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Credit Limit</label>
+                                    <InputNumber class="form-control" @bind-Value="customerForm.CreditLimit" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Address</label>
+                            <InputTextArea class="form-control" @bind-Value="customerForm.Address" rows="2" />
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">City</label>
+                                    <InputText class="form-control" @bind-Value="customerForm.City" />
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">State</label>
+                                    <InputText class="form-control" @bind-Value="customerForm.State" />
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Zip Code</label>
+                                    <InputText class="form-control" @bind-Value="customerForm.ZipCode" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Country</label>
+                                    <InputText class="form-control" @bind-Value="customerForm.Country" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Status</label>
+                                    <InputSelect class="form-control" @bind-Value="customerForm.Status">
+                                        <option value="@CustomerStatus.Active">Active</option>
+                                        <option value="@CustomerStatus.Inactive">Inactive</option>
+                                        <option value="@CustomerStatus.Blocked">Blocked</option>
+                                    </InputSelect>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Customer</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<CustomerDto> customers = new();
+    private List<CustomerDto> filteredCustomers = new();
+    private string searchTerm = "";
+    private string selectedStatus = "";
+    private bool showModal = false;
+    private bool isEditing = false;
+    private CreateCustomerDto customerForm = new();
+    private int editingCustomerId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCustomers();
+    }
+
+    private async Task LoadCustomers()
+    {
+        // This would normally call a service to get data from the API
+        // For now, using sample data
+        customers = new List<CustomerDto>
+        {
+            new CustomerDto 
+            { 
+                Id = 1, 
+                Name = "Acme Corporation", 
+                Email = "billing@acme.com", 
+                Phone = "+1-555-0123", 
+                City = "New York",
+                CreditLimit = 50000,
+                OutstandingBalance = 15000,
+                Status = CustomerStatus.Active,
+                TotalInvoices = 45
+            },
+            new CustomerDto 
+            { 
+                Id = 2, 
+                Name = "Tech Solutions Inc", 
+                Email = "accounts@techsolutions.com", 
+                Phone = "+1-555-0456", 
+                City = "San Francisco",
+                CreditLimit = 75000,
+                OutstandingBalance = 0,
+                Status = CustomerStatus.Active,
+                TotalInvoices = 32
+            },
+            new CustomerDto 
+            { 
+                Id = 3, 
+                Name = "Global Enterprises", 
+                Email = "finance@global.com", 
+                Phone = "+1-555-0789", 
+                City = "Chicago",
+                CreditLimit = 100000,
+                OutstandingBalance = 25000,
+                Status = CustomerStatus.Active,
+                TotalInvoices = 67
+            }
+        };
+        
+        filteredCustomers = customers.ToList();
+    }
+
+    private void FilterCustomers()
+    {
+        filteredCustomers = customers.Where(c => 
+            (string.IsNullOrEmpty(searchTerm) || 
+             c.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+             c.Email.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+             c.Phone.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrEmpty(selectedStatus) || c.Status.ToString() == selectedStatus)
+        ).ToList();
+    }
+
+    private void ShowCreateModal()
+    {
+        customerForm = new CreateCustomerDto();
+        isEditing = false;
+        showModal = true;
+    }
+
+    private void EditCustomer(CustomerDto customer)
+    {
+        customerForm = new CreateCustomerDto
+        {
+            Name = customer.Name,
+            Email = customer.Email,
+            Phone = customer.Phone,
+            Address = customer.Address,
+            City = customer.City,
+            State = customer.State,
+            ZipCode = customer.ZipCode,
+            Country = customer.Country,
+            CreditLimit = customer.CreditLimit,
+            Status = customer.Status
+        };
+        editingCustomerId = customer.Id;
+        isEditing = true;
+        showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        customerForm = new CreateCustomerDto();
+        isEditing = false;
+    }
+
+    private async Task SaveCustomer()
+    {
+        // This would normally call a service to save to the API
+        if (isEditing)
+        {
+            var existingCustomer = customers.First(c => c.Id == editingCustomerId);
+            existingCustomer.Name = customerForm.Name;
+            existingCustomer.Email = customerForm.Email;
+            existingCustomer.Phone = customerForm.Phone;
+            existingCustomer.Address = customerForm.Address;
+            existingCustomer.City = customerForm.City;
+            existingCustomer.State = customerForm.State;
+            existingCustomer.ZipCode = customerForm.ZipCode;
+            existingCustomer.Country = customerForm.Country;
+            existingCustomer.CreditLimit = customerForm.CreditLimit;
+            existingCustomer.Status = customerForm.Status;
+        }
+        else
+        {
+            var newCustomer = new CustomerDto
+            {
+                Id = customers.Max(c => c.Id) + 1,
+                Name = customerForm.Name,
+                Email = customerForm.Email,
+                Phone = customerForm.Phone,
+                Address = customerForm.Address,
+                City = customerForm.City,
+                State = customerForm.State,
+                ZipCode = customerForm.ZipCode,
+                Country = customerForm.Country,
+                CreditLimit = customerForm.CreditLimit,
+                Status = customerForm.Status,
+                OutstandingBalance = 0,
+                TotalInvoices = 0
+            };
+            customers.Add(newCustomer);
+        }
+        
+        FilterCustomers();
+        CloseModal();
+    }
+
+    private void CreateInvoice(int customerId)
+    {
+        // Navigate to invoice creation with customer pre-selected
+        // Navigation.NavigateTo($"/invoices/create?customerId={customerId}");
+    }
+
+    private void ViewStatement(int customerId)
+    {
+        // Navigate to customer statement
+        // Navigation.NavigateTo($"/customers/{customerId}/statement");
+    }
+
+    private string GetStatusClass(CustomerStatus status)
+    {
+        return status switch
+        {
+            CustomerStatus.Active => "success",
+            CustomerStatus.Inactive => "secondary",
+            CustomerStatus.Blocked => "danger",
+            _ => "secondary"
+        };
+    }
+}

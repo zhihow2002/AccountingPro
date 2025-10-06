@@ -1,0 +1,521 @@
+@page "/products"
+@using AccountingPro.Application.DTOs
+@using AccountingPro.Core.Enums
+
+<div class="page-header">
+    <h1 class="page-title">Product Inventory</h1>
+    <button class="btn btn-primary" @onclick="OpenCreateModal">
+        <i class="icon">➕</i> Add Product
+    </button>
+</div>
+
+<div class="card">
+    <div class="search-bar">
+        <input type="text" @bind="searchText" @oninput="FilterProducts" placeholder="Search products..." class="search-input" />
+        <select @bind="selectedType"  class="filter-select">
+            <option value="">All Types</option>
+            <option value="Product">Product</option>
+            <option value="Service">Service</option>
+        </select>
+        <select @bind="selectedStatus"  class="filter-select">
+            <option value="">All Statuses</option>
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+        </select>
+    </div>
+
+    <div class="table-container">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>SKU</th>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Category</th>
+                    <th>Quantity</th>
+                    <th>Unit Price</th>
+                    <th>Inventory Value</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var product in filteredProducts)
+                {
+                    <tr>
+                        <td class="font-semibold">@product.SKU</td>
+                        <td>@product.Name</td>
+                        <td>
+                            <span class="badge @(product.Type == "Product" ? "badge-primary" : "badge-secondary")">
+                                @product.Type
+                            </span>
+                        </td>
+                        <td>@product.Category</td>
+                        <td class="text-center">
+                            @if (product.Type == "Product")
+                            {
+                                <span class="@(product.QuantityOnHand < product.ReorderLevel ? "text-danger font-semibold" : "")">
+                                    @product.QuantityOnHand
+                                </span>
+                                @if (product.QuantityOnHand < product.ReorderLevel)
+                                {
+                                    <span class="reorder-warning" title="Below reorder level">⚠️</span>
+                                }
+                            }
+                            else
+                            {
+                                <span class="text-muted">N/A</span>
+                            }
+                        </td>
+                        <td class="text-right">$@product.UnitPrice.ToString("N2")</td>
+                        <td class="text-right">
+                            @if (product.Type == "Product")
+                            {
+                                <span>$@((product.QuantityOnHand * product.UnitPrice).ToString("N2"))</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">N/A</span>
+                            }
+                        </td>
+                        <td>
+                            <span class="status-badge @GetStatusClass(product.Status)">
+                                @product.Status
+                            </span>
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn-icon btn-edit" @onclick="() => EditProduct(product)" title="Edit">
+                                    ✏️
+                                </button>
+                                @if (product.Type == "Product")
+                                {
+                                    <button class="btn-icon btn-info" @onclick="() => AdjustInventory(product)" title="Adjust Inventory">
+                                        📦
+                                    </button>
+                                }
+                                <button class="btn-icon btn-delete" @onclick="() => DeleteProduct(product.Id)" title="Delete">
+                                    🗑️
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        
+        @if (!filteredProducts.Any())
+        {
+            <div class="empty-state">
+                <div class="empty-icon">📦</div>
+                <p class="empty-message">No products found</p>
+                <p class="empty-description">Add your first product to get started</p>
+            </div>
+        }
+    </div>
+</div>
+
+@if (showModal)
+{
+    <div class="modal-overlay" @onclick="CloseModal">
+        <div class="modal" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h2>@(isEditing ? "Edit" : "Add") Product</h2>
+                <button class="modal-close" @onclick="CloseModal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>SKU *</label>
+                        <input type="text" @bind="currentProduct.SKU" class="form-input" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Name *</label>
+                        <input type="text" @bind="currentProduct.Name" class="form-input" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Type *</label>
+                        <select @bind="currentProduct.Type" class="form-input"  required>
+                            <option value="">Select Type</option>
+                            <option value="Product">Product</option>
+                            <option value="Service">Service</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <input type="text" @bind="currentProduct.Category" class="form-input" />
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea @bind="currentProduct.Description" class="form-input" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Unit Price *</label>
+                        <input type="number" step="0.01" @bind="currentProduct.UnitPrice" class="form-input" required />
+                    </div>
+                    
+                    @if (currentProduct.Type == "Product")
+                    {
+                        <div class="form-group">
+                            <label>Quantity on Hand</label>
+                            <input type="number" @bind="currentProduct.QuantityOnHand" class="form-input" />
+                        </div>
+                        <div class="form-group">
+                            <label>Reorder Level</label>
+                            <input type="number" @bind="currentProduct.ReorderLevel" class="form-input" />
+                        </div>
+                        <div class="form-group">
+                            <label>Cost per Unit</label>
+                            <input type="number" step="0.01" @bind="currentProduct.CostPerUnit" class="form-input" />
+                        </div>
+                    }
+                    
+                    <div class="form-group">
+                        <label>Tax Rate (%)</label>
+                        <input type="number" step="0.01" @bind="currentProduct.TaxRate" class="form-input" />
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select @bind="currentProduct.Status" class="form-input">
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                <button class="btn btn-primary" @onclick="SaveProduct" disabled="@(!IsValidProduct())">
+                    @(isEditing ? "Update" : "Save") Product
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showInventoryModal)
+{
+    <div class="modal-overlay" @onclick="CloseInventoryModal">
+        <div class="modal" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h2>Adjust Inventory - @selectedProduct?.Name</h2>
+                <button class="modal-close" @onclick="CloseInventoryModal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="inventory-info">
+                    <p><strong>SKU:</strong> @selectedProduct?.SKU</p>
+                    <p><strong>Current Quantity:</strong> @selectedProduct?.QuantityOnHand</p>
+                    <p><strong>Reorder Level:</strong> @selectedProduct?.ReorderLevel</p>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Adjustment Type *</label>
+                        <select @bind="adjustmentType" class="form-input" required>
+                            <option value="">Select Type</option>
+                            <option value="Add">Add Inventory</option>
+                            <option value="Remove">Remove Inventory</option>
+                            <option value="Set">Set Exact Quantity</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            @(adjustmentType == "Set" ? "New Quantity" : "Adjustment Quantity") *
+                        </label>
+                        <input type="number" @bind="adjustmentQuantity" class="form-input" required />
+                    </div>
+                    <div class="form-group col-span-2">
+                        <label>Reason</label>
+                        <textarea @bind="adjustmentReason" class="form-input" rows="3" placeholder="Reason for inventory adjustment..."></textarea>
+                    </div>
+                </div>
+                
+                @if (adjustmentType != "" && adjustmentQuantity > 0)
+                {
+                    <div class="adjustment-preview">
+                        <h4>Preview:</h4>
+                        <p>Current Quantity: @selectedProduct?.QuantityOnHand</p>
+                        <p>New Quantity: @GetNewQuantity()</p>
+                        <p>Change: @GetQuantityChange()</p>
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="CloseInventoryModal">Cancel</button>
+                <button class="btn btn-primary" @onclick="SaveInventoryAdjustment" disabled="@(string.IsNullOrEmpty(adjustmentType) || adjustmentQuantity <= 0)">
+                    Apply Adjustment
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ProductDto> products = new();
+    private List<ProductDto> filteredProducts = new();
+    private ProductDto currentProduct = new();
+    private ProductDto? selectedProduct;
+    private bool showModal = false;
+    private bool showInventoryModal = false;
+    private bool isEditing = false;
+    private string searchText = "";
+    private string selectedType = "";
+    private string selectedStatus = "";
+
+    // Inventory adjustment fields
+    private string adjustmentType = "";
+    private int adjustmentQuantity = 0;
+    private string adjustmentReason = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Initialize with sample data
+        products = new List<ProductDto>
+        {
+            new ProductDto
+            {
+                Id = 1,
+                SKU = "LAPTOP-001",
+                Name = "Dell Latitude 5520",
+                Type = "Product",
+                Category = "Electronics",
+                Description = "Business laptop with 16GB RAM",
+                UnitPrice = 1299.99m,
+                CostPerUnit = 899.99m,
+                QuantityOnHand = 15,
+                ReorderLevel = 5,
+                TaxRate = 8.25m,
+                Status = "Active"
+            },
+            new ProductDto
+            {
+                Id = 2,
+                SKU = "SVC-CONS",
+                Name = "IT Consulting",
+                Type = "Service",
+                Category = "Consulting",
+                Description = "Technical consulting services",
+                UnitPrice = 150.00m,
+                CostPerUnit = 0,
+                QuantityOnHand = 0,
+                ReorderLevel = 0,
+                TaxRate = 0.00m,
+                Status = "Active"
+            },
+            new ProductDto
+            {
+                Id = 3,
+                SKU = "MOUSE-001",
+                Name = "Wireless Mouse",
+                Type = "Product",
+                Category = "Electronics",
+                Description = "Ergonomic wireless mouse",
+                UnitPrice = 29.99m,
+                CostPerUnit = 15.99m,
+                QuantityOnHand = 3,
+                ReorderLevel = 10,
+                TaxRate = 8.25m,
+                Status = "Active"
+            },
+            new ProductDto
+            {
+                Id = 4,
+                SKU = "DESK-001",
+                Name = "Standing Desk",
+                Type = "Product",
+                Category = "Furniture",
+                Description = "Adjustable height standing desk",
+                UnitPrice = 599.99m,
+                CostPerUnit = 399.99m,
+                QuantityOnHand = 8,
+                ReorderLevel = 3,
+                TaxRate = 8.25m,
+                Status = "Active"
+            }
+        };
+        
+        filteredProducts = products.ToList();
+    }
+
+    private void OpenCreateModal()
+    {
+        currentProduct = new ProductDto { Status = "Active", Type = "Product" };
+        isEditing = false;
+        showModal = true;
+    }
+
+    private void EditProduct(ProductDto product)
+    {
+        currentProduct = new ProductDto
+        {
+            Id = product.Id,
+            SKU = product.SKU,
+            Name = product.Name,
+            Type = product.Type,
+            Category = product.Category,
+            Description = product.Description,
+            UnitPrice = product.UnitPrice,
+            CostPerUnit = product.CostPerUnit,
+            QuantityOnHand = product.QuantityOnHand,
+            ReorderLevel = product.ReorderLevel,
+            TaxRate = product.TaxRate,
+            Status = product.Status
+        };
+        isEditing = true;
+        showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        currentProduct = new ProductDto();
+    }
+
+    private void AdjustInventory(ProductDto product)
+    {
+        selectedProduct = product;
+        adjustmentType = "";
+        adjustmentQuantity = 0;
+        adjustmentReason = "";
+        showInventoryModal = true;
+    }
+
+    private void CloseInventoryModal()
+    {
+        showInventoryModal = false;
+        selectedProduct = null;
+    }
+
+    private void OnTypeChanged(ChangeEventArgs e)
+    {
+        currentProduct.Type = e.Value?.ToString() ?? "";
+        if (currentProduct.Type == "Service")
+        {
+            currentProduct.QuantityOnHand = 0;
+            currentProduct.ReorderLevel = 0;
+            currentProduct.CostPerUnit = 0;
+        }
+    }
+
+    private bool IsValidProduct()
+    {
+        return !string.IsNullOrWhiteSpace(currentProduct.SKU) && 
+               !string.IsNullOrWhiteSpace(currentProduct.Name) &&
+               !string.IsNullOrWhiteSpace(currentProduct.Type) &&
+               currentProduct.UnitPrice > 0;
+    }
+
+    private async Task SaveProduct()
+    {
+        if (!IsValidProduct())
+            return;
+
+        if (isEditing)
+        {
+            var existingProduct = products.FirstOrDefault(p => p.Id == currentProduct.Id);
+            if (existingProduct != null)
+            {
+                existingProduct.SKU = currentProduct.SKU;
+                existingProduct.Name = currentProduct.Name;
+                existingProduct.Type = currentProduct.Type;
+                existingProduct.Category = currentProduct.Category;
+                existingProduct.Description = currentProduct.Description;
+                existingProduct.UnitPrice = currentProduct.UnitPrice;
+                existingProduct.CostPerUnit = currentProduct.CostPerUnit;
+                existingProduct.QuantityOnHand = currentProduct.QuantityOnHand;
+                existingProduct.ReorderLevel = currentProduct.ReorderLevel;
+                existingProduct.TaxRate = currentProduct.TaxRate;
+                existingProduct.Status = currentProduct.Status;
+            }
+        }
+        else
+        {
+            currentProduct.Id = products.Count > 0 ? products.Max(p => p.Id) + 1 : 1;
+            products.Add(currentProduct);
+        }
+
+        FilterProducts();
+        CloseModal();
+    }
+
+    private async Task SaveInventoryAdjustment()
+    {
+        if (selectedProduct != null && !string.IsNullOrEmpty(adjustmentType) && adjustmentQuantity > 0)
+        {
+            var product = products.FirstOrDefault(p => p.Id == selectedProduct.Id);
+            if (product != null)
+            {
+                switch (adjustmentType)
+                {
+                    case "Add":
+                        product.QuantityOnHand += adjustmentQuantity;
+                        break;
+                    case "Remove":
+                        product.QuantityOnHand = Math.Max(0, product.QuantityOnHand - adjustmentQuantity);
+                        break;
+                    case "Set":
+                        product.QuantityOnHand = adjustmentQuantity;
+                        break;
+                }
+            }
+            
+            FilterProducts();
+            CloseInventoryModal();
+        }
+    }
+
+    private int GetNewQuantity()
+    {
+        if (selectedProduct == null) return 0;
+        
+        return adjustmentType switch
+        {
+            "Add" => selectedProduct.QuantityOnHand + adjustmentQuantity,
+            "Remove" => Math.Max(0, selectedProduct.QuantityOnHand - adjustmentQuantity),
+            "Set" => adjustmentQuantity,
+            _ => selectedProduct.QuantityOnHand
+        };
+    }
+
+    private string GetQuantityChange()
+    {
+        if (selectedProduct == null) return "";
+        
+        var newQty = GetNewQuantity();
+        var change = newQty - selectedProduct.QuantityOnHand;
+        
+        if (change > 0)
+            return $"+{change}";
+        else if (change < 0)
+            return change.ToString();
+        else
+            return "0";
+    }
+
+    private void DeleteProduct(int id)
+    {
+        products.RemoveAll(p => p.Id == id);
+        FilterProducts();
+    }
+
+    private void FilterProducts()
+    {
+        filteredProducts = products.Where(p =>
+            (string.IsNullOrEmpty(searchText) || 
+             p.SKU.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+             p.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+             p.Category?.Contains(searchText, StringComparison.OrdinalIgnoreCase) == true) &&
+            (string.IsNullOrEmpty(selectedType) || p.Type == selectedType) &&
+            (string.IsNullOrEmpty(selectedStatus) || p.Status == selectedStatus)
+        ).ToList();
+    }
+
+    private string GetStatusClass(string status)
+    {
+        return status?.ToLower() switch
+        {
+            "active" => "status-active",
+            "inactive" => "status-inactive",
+            _ => "status-pending"
+        };
+    }
+}

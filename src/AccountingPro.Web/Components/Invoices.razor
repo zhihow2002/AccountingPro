@@ -1,0 +1,698 @@
+@page "/invoices"
+@using AccountingPro.Application.DTOs
+@using AccountingPro.Core.Enums
+
+<PageTitle>Invoices - AccountingPro</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Invoice Management</h1>
+    <button class="btn btn-primary" @onclick="CreateNewInvoice">
+        <span class="oi oi-plus"></span> Create Invoice
+    </button>
+</div>
+
+<!-- Invoice Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon invoices">📄</div>
+            <div class="stat-content">
+                <h3>@invoices.Count</h3>
+                <p>Total Invoices</p>
+                <small>This month</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon revenue">💰</div>
+            <div class="stat-content">
+                <h3>@invoices.Sum(i => i.TotalAmount).ToString("C")</h3>
+                <p>Total Amount</p>
+                <small>All invoices</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon profit">📈</div>
+            <div class="stat-content">
+                <h3>@invoices.Sum(i => i.PaidAmount).ToString("C")</h3>
+                <p>Amount Paid</p>
+                <small>Received payments</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon expenses">⏰</div>
+            <div class="stat-content">
+                <h3>@invoices.Sum(i => i.BalanceAmount).ToString("C")</h3>
+                <p>Outstanding</p>
+                <small class="text-warning">Pending payment</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="row mb-3">
+    <div class="col-md-3">
+        <input type="text" class="form-control" placeholder="Search invoices..." @bind="searchTerm" @oninput="FilterInvoices" />
+    </div>
+    <div class="col-md-2">
+        <select class="form-control" @bind="selectedStatus" >
+            <option value="">All Status</option>
+            <option value="@InvoiceStatus.Draft">Draft</option>
+            <option value="@InvoiceStatus.Sent">Sent</option>
+            <option value="@InvoiceStatus.Paid">Paid</option>
+            <option value="@InvoiceStatus.PartiallyPaid">Partially Paid</option>
+            <option value="@InvoiceStatus.Overdue">Overdue</option>
+            <option value="@InvoiceStatus.Cancelled">Cancelled</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select class="form-control" @bind="selectedCustomer" >
+            <option value="">All Customers</option>
+            @foreach (var customer in GetUniqueCustomers())
+            {
+                <option value="@customer.Key">@customer.Value</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2">
+        <input type="date" class="form-control" @bind="fromDate"  />
+    </div>
+    <div class="col-md-2">
+        <input type="date" class="form-control" @bind="toDate"  />
+    </div>
+</div>
+
+<!-- Invoice List -->
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Invoice #</th>
+                <th>Customer</th>
+                <th>Date</th>
+                <th>Due Date</th>
+                <th>Amount</th>
+                <th>Paid</th>
+                <th>Balance</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (filteredInvoices.Any())
+            {
+                @foreach (var invoice in filteredInvoices)
+                {
+                    <tr>
+                        <td>
+                            <strong>@invoice.InvoiceNumber</strong>
+                        </td>
+                        <td>@invoice.CustomerName</td>
+                        <td>@invoice.InvoiceDate.ToString("MMM dd, yyyy")</td>
+                        <td>
+                            <span class="@(invoice.DueDate < DateTime.Today && invoice.Status != InvoiceStatus.Paid ? "text-danger" : "")">
+                                @invoice.DueDate.ToString("MMM dd, yyyy")
+                            </span>
+                        </td>
+                        <td>@invoice.TotalAmount.ToString("C")</td>
+                        <td>@invoice.PaidAmount.ToString("C")</td>
+                        <td>
+                            <span class="@(invoice.BalanceAmount > 0 ? "text-warning" : "text-success")">
+                                @invoice.BalanceAmount.ToString("C")
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge badge-@GetStatusClass(invoice.Status)">
+                                @invoice.Status
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => ViewInvoice(invoice.Id)" title="View">
+                                    <span class="oi oi-eye"></span>
+                                </button>
+                                @if (invoice.Status == InvoiceStatus.Draft)
+                                {
+                                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => EditInvoice(invoice.Id)" title="Edit">
+                                        <span class="oi oi-pencil"></span>
+                                    </button>
+                                }
+                                @if (invoice.Status != InvoiceStatus.Paid && invoice.Status != InvoiceStatus.Cancelled)
+                                {
+                                    <button class="btn btn-sm btn-outline-success" @onclick="() => RecordPayment(invoice.Id)" title="Record Payment">
+                                        <span class="oi oi-dollar"></span>
+                                    </button>
+                                }
+                                <button class="btn btn-sm btn-outline-info" @onclick="() => PrintInvoice(invoice.Id)" title="Print/PDF">
+                                    <span class="oi oi-print"></span>
+                                </button>
+                                @if (invoice.Status == InvoiceStatus.Draft)
+                                {
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteInvoice(invoice.Id)" title="Delete">
+                                        <span class="oi oi-trash"></span>
+                                    </button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="9" class="text-center text-muted">
+                        <div class="py-4">
+                            <span class="oi oi-document" style="font-size: 2rem; opacity: 0.3;"></span>
+                            <p class="mt-2">No invoices found</p>
+                            <button class="btn btn-primary" @onclick="CreateNewInvoice">Create Your First Invoice</button>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Payment Recording Modal -->
+@if (showPaymentModal)
+{
+    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Record Payment</h5>
+                    <button type="button" class="btn-close" @onclick="ClosePaymentModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="paymentForm" OnValidSubmit="SavePayment">
+                        <DataAnnotationsValidator />
+                        <div class="mb-3">
+                            <label class="form-label">Invoice: @selectedInvoice?.InvoiceNumber</label>
+                            <div class="text-muted">
+                                Customer: @selectedInvoice?.CustomerName<br/>
+                                Amount Due: @selectedInvoice?.BalanceAmount.ToString("C")
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Payment Date *</label>
+                            <InputDate class="form-control" @bind-Value="paymentForm.PaymentDate" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Amount *</label>
+                            <InputNumber class="form-control" @bind-Value="paymentForm.Amount" />
+                            <small class="form-text text-muted">Maximum: @selectedInvoice?.BalanceAmount.ToString("C")</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Payment Method *</label>
+                            <InputSelect class="form-control" @bind-Value="paymentForm.PaymentMethod">
+                                <option value="@PaymentMethod.Cash">Cash</option>
+                                <option value="@PaymentMethod.Check">Check</option>
+                                <option value="@PaymentMethod.CreditCard">Credit Card</option>
+                                <option value="@PaymentMethod.BankTransfer">Bank Transfer</option>
+                                <option value="@PaymentMethod.PayPal">PayPal</option>
+                                <option value="@PaymentMethod.Other">Other</option>
+                            </InputSelect>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Reference</label>
+                            <InputText class="form-control" @bind-Value="paymentForm.Reference" placeholder="Check number, transaction ID, etc." />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Notes</label>
+                            <InputTextArea class="form-control" @bind-Value="paymentForm.Notes" rows="3" />
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="ClosePaymentModal">Cancel</button>
+                            <button type="submit" class="btn btn-success">Record Payment</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Invoice Creation Modal -->
+@if (showCreateModal)
+{
+    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create New Invoice</h5>
+                    <button type="button" class="btn-close" @onclick="CloseCreateModal"></button>
+                </div>
+                <EditForm Model="@createInvoiceForm" OnValidSubmit="@SaveInvoice">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Customer</label>
+                                    <select @bind="createInvoiceForm.CustomerId" class="form-select" required>
+                                        <option value="0">Select Customer</option>
+                                        @foreach (var customer in GetCustomerOptions())
+                                        {
+                                            <option value="@customer.Key">@customer.Value</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Invoice Date</label>
+                                    <input type="date" @bind="createInvoiceForm.InvoiceDate" class="form-control" required />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Due Date</label>
+                                    <input type="date" @bind="createInvoiceForm.DueDate" class="form-control" required />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <input type="text" @bind="createInvoiceForm.Description" class="form-control" placeholder="Enter description" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Notes</label>
+                            <textarea @bind="createInvoiceForm.Notes" class="form-control" rows="2" placeholder="Enter any notes"></textarea>
+                        </div>
+                        
+                        <!-- Invoice Items -->
+                        <h6>Invoice Items</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Product/Service</th>
+                                        <th>Description</th>
+                                        <th>Qty</th>
+                                        <th>Unit Price</th>
+                                        <th>Total</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (int i = 0; i < createInvoiceForm.Items.Count; i++)
+                                    {
+                                        var index = i;
+                                        <tr>
+                                            <td>
+                                                <select @bind="createInvoiceForm.Items[index].ProductId" class="form-select form-select-sm">
+                                                    <option value="0">Select Product</option>
+                                                    @foreach (var product in GetProductOptions())
+                                                    {
+                                                        <option value="@product.Key">@product.Value</option>
+                                                    }
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <input type="text" @bind="createInvoiceForm.Items[index].Description" class="form-control form-control-sm" />
+                                            </td>
+                                            <td>
+                                                <input type="number" @bind="createInvoiceForm.Items[index].Quantity" @oninput="e => UpdateItemQuantity(index, e)" class="form-control form-control-sm" min="1" />
+                                            </td>
+                                            <td>
+                                                <input type="number" @bind="createInvoiceForm.Items[index].UnitPrice" @oninput="e => UpdateItemPrice(index, e)" class="form-control form-control-sm" step="0.01" min="0" />
+                                            </td>
+                                            <td>
+                                                <span class="fw-bold">@((createInvoiceForm.Items[index].Quantity * createInvoiceForm.Items[index].UnitPrice).ToString("C"))</span>
+                                            </td>
+                                            <td>
+                                                <button type="button" class="btn btn-sm btn-danger" @onclick="() => RemoveInvoiceItem(index)">×</button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-success" @onclick="AddInvoiceItem">+ Add Item</button>
+                        
+                        <div class="row mt-3">
+                            <div class="col-md-6 offset-md-6">
+                                <div class="d-flex justify-content-between">
+                                    <strong>Total: @GetInvoiceTotal().ToString("C")</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseCreateModal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create Invoice</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<InvoiceDto> invoices = new();
+    private List<InvoiceDto> filteredInvoices = new();
+    private string searchTerm = "";
+    private string selectedStatus = "";
+    private string selectedCustomer = "";
+    private DateTime? fromDate;
+    private DateTime? toDate;
+    private bool showPaymentModal = false;
+    private CreatePaymentDto paymentForm = new();
+    private InvoiceDto? selectedInvoice;
+    
+    // Invoice creation variables
+    private bool showCreateModal = false;
+    private CreateInvoiceDto createInvoiceForm = new();
+    private List<CustomerDto> customers = new();
+    private List<ProductDto> products = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInvoices();
+    }
+
+    private async Task LoadInvoices()
+    {
+        // Sample invoice data - would come from API
+        invoices = new List<InvoiceDto>
+        {
+            new InvoiceDto
+            {
+                Id = 1,
+                InvoiceNumber = "INV-2024-001",
+                CustomerId = 1,
+                CustomerName = "Acme Corporation",
+                InvoiceDate = DateTime.Today.AddDays(-30),
+                DueDate = DateTime.Today,
+                SubTotal = 10000,
+                TaxAmount = 800,
+                TotalAmount = 10800,
+                PaidAmount = 5000,
+                BalanceAmount = 5800,
+                Status = InvoiceStatus.PartiallyPaid,
+                Notes = "Monthly service charges",
+                Items = new List<InvoiceItemDto>
+                {
+                    new InvoiceItemDto { Description = "Consulting Services", Quantity = 40, UnitPrice = 250, LineTotal = 10000 }
+                }
+            },
+            new InvoiceDto
+            {
+                Id = 2,
+                InvoiceNumber = "INV-2024-002",
+                CustomerId = 2,
+                CustomerName = "Tech Solutions Inc",
+                InvoiceDate = DateTime.Today.AddDays(-15),
+                DueDate = DateTime.Today.AddDays(15),
+                SubTotal = 15000,
+                TaxAmount = 1200,
+                TotalAmount = 16200,
+                PaidAmount = 16200,
+                BalanceAmount = 0,
+                Status = InvoiceStatus.Paid,
+                Notes = "Software development project",
+                Items = new List<InvoiceItemDto>
+                {
+                    new InvoiceItemDto { Description = "Software Development", Quantity = 60, UnitPrice = 250, LineTotal = 15000 }
+                }
+            },
+            new InvoiceDto
+            {
+                Id = 3,
+                InvoiceNumber = "INV-2024-003",
+                CustomerId = 3,
+                CustomerName = "Global Enterprises",
+                InvoiceDate = DateTime.Today.AddDays(-5),
+                DueDate = DateTime.Today.AddDays(25),
+                SubTotal = 25000,
+                TaxAmount = 2000,
+                TotalAmount = 27000,
+                PaidAmount = 0,
+                BalanceAmount = 27000,
+                Status = InvoiceStatus.Sent,
+                Notes = "Q4 consulting services",
+                Items = new List<InvoiceItemDto>
+                {
+                    new InvoiceItemDto { Description = "Strategic Consulting", Quantity = 100, UnitPrice = 250, LineTotal = 25000 }
+                }
+            }
+        };
+        
+        filteredInvoices = invoices.ToList();
+        
+        // Load sample customers and products for creating invoices
+        await LoadCustomersAndProducts();
+    }
+
+    private async Task LoadCustomersAndProducts()
+    {
+        // Sample customers data
+        customers = new List<CustomerDto>
+        {
+            new CustomerDto { Id = 1, Name = "Acme Corporation", CompanyName = "Acme Corporation" },
+            new CustomerDto { Id = 2, Name = "Global Industries", CompanyName = "Global Industries" },
+            new CustomerDto { Id = 3, Name = "Tech Solutions", CompanyName = "Tech Solutions" },
+            new CustomerDto { Id = 4, Name = "City Services", CompanyName = "City Services" }
+        };
+
+        // Sample products data
+        products = new List<ProductDto>
+        {
+            new ProductDto { Id = 1, Name = "Consulting Services", UnitPrice = 150.00m },
+            new ProductDto { Id = 2, Name = "Software License", UnitPrice = 500.00m },
+            new ProductDto { Id = 3, Name = "Training Program", UnitPrice = 250.00m },
+            new ProductDto { Id = 4, Name = "Support Services", UnitPrice = 100.00m },
+            new ProductDto { Id = 5, Name = "Custom Development", UnitPrice = 200.00m }
+        };
+    }
+
+    private void FilterInvoices()
+    {
+        filteredInvoices = invoices.Where(i => 
+            (string.IsNullOrEmpty(searchTerm) || 
+             i.InvoiceNumber.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+             i.CustomerName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrEmpty(selectedStatus) || i.Status.ToString() == selectedStatus) &&
+            (string.IsNullOrEmpty(selectedCustomer) || i.CustomerId.ToString() == selectedCustomer) &&
+            (fromDate == null || i.InvoiceDate >= fromDate) &&
+            (toDate == null || i.InvoiceDate <= toDate)
+        ).ToList();
+    }
+
+    private Dictionary<string, string> GetUniqueCustomers()
+    {
+        return invoices
+            .GroupBy(i => i.CustomerId)
+            .ToDictionary(g => g.Key.ToString(), g => g.First().CustomerName);
+    }
+
+    private void CreateNewInvoice()
+    {
+        createInvoiceForm = new CreateInvoiceDto
+        {
+            InvoiceDate = DateTime.Today,
+            DueDate = DateTime.Today.AddDays(30),
+            Items = new List<CreateInvoiceItemDto> 
+            { 
+                new CreateInvoiceItemDto { Quantity = 1, UnitPrice = 0 } 
+            }
+        };
+        showCreateModal = true;
+    }
+
+    private void CloseCreateModal()
+    {
+        showCreateModal = false;
+        createInvoiceForm = new CreateInvoiceDto();
+    }
+
+    private async Task SaveInvoice()
+    {
+        // Generate a new invoice number
+        var newInvoiceNumber = $"INV-{DateTime.Now.Year}-{(invoices.Count + 1):D3}";
+        
+        var customer = customers.FirstOrDefault(c => c.Id == createInvoiceForm.CustomerId);
+        var subTotal = createInvoiceForm.Items.Sum(item => item.Quantity * item.UnitPrice);
+        var taxAmount = subTotal * 0.08m; // 8% tax
+        var totalAmount = subTotal + taxAmount;
+
+        var newInvoice = new InvoiceDto
+        {
+            Id = invoices.Count + 1,
+            InvoiceNumber = newInvoiceNumber,
+            CustomerId = createInvoiceForm.CustomerId,
+            CustomerName = customer?.Name ?? "Unknown Customer",
+            InvoiceDate = createInvoiceForm.InvoiceDate,
+            DueDate = createInvoiceForm.DueDate,
+            SubTotal = subTotal,
+            TaxAmount = taxAmount,
+            TotalAmount = totalAmount,
+            PaidAmount = 0,
+            BalanceAmount = totalAmount,
+            Description = createInvoiceForm.Description,
+            Notes = createInvoiceForm.Notes,
+            Status = InvoiceStatus.Draft,
+            Items = createInvoiceForm.Items.Select(item => new InvoiceItemDto
+            {
+                ProductId = item.ProductId,
+                ProductName = products.FirstOrDefault(p => p.Id == item.ProductId)?.Name ?? "Custom Item",
+                Description = item.Description,
+                Quantity = item.Quantity,
+                UnitPrice = item.UnitPrice,
+                TotalPrice = item.Quantity * item.UnitPrice,
+                LineTotal = item.Quantity * item.UnitPrice
+            }).ToList()
+        };
+
+        invoices.Add(newInvoice);
+        FilterInvoices();
+        CloseCreateModal();
+    }
+
+    private Dictionary<int, string> GetCustomerOptions()
+    {
+        return customers.ToDictionary(c => c.Id, c => c.Name);
+    }
+
+    private Dictionary<int, string> GetProductOptions()
+    {
+        return products.ToDictionary(p => p.Id, p => $"{p.Name} - {p.UnitPrice:C}");
+    }
+
+    private void AddInvoiceItem()
+    {
+        createInvoiceForm.Items.Add(new CreateInvoiceItemDto { Quantity = 1, UnitPrice = 0 });
+    }
+
+    private void RemoveInvoiceItem(int index)
+    {
+        if (createInvoiceForm.Items.Count > 1)
+        {
+            createInvoiceForm.Items.RemoveAt(index);
+        }
+    }
+
+    private void UpdateItemQuantity(int index, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int quantity))
+        {
+            createInvoiceForm.Items[index].Quantity = Math.Max(1, quantity);
+        }
+        StateHasChanged();
+    }
+
+    private void UpdateItemPrice(int index, ChangeEventArgs e)
+    {
+        if (decimal.TryParse(e.Value?.ToString(), out decimal price))
+        {
+            createInvoiceForm.Items[index].UnitPrice = Math.Max(0, price);
+        }
+        StateHasChanged();
+    }
+
+    private decimal GetInvoiceTotal()
+    {
+        var subTotal = createInvoiceForm.Items.Sum(item => item.Quantity * item.UnitPrice);
+        var taxAmount = subTotal * 0.08m; // 8% tax
+        return subTotal + taxAmount;
+    }
+
+    private void ViewInvoice(int invoiceId)
+    {
+        // Navigate to invoice details page
+        // Navigation.NavigateTo($"/invoices/{invoiceId}");
+    }
+
+    private void EditInvoice(int invoiceId)
+    {
+        // Navigate to invoice edit page
+        // Navigation.NavigateTo($"/invoices/{invoiceId}/edit");
+    }
+
+    private void RecordPayment(int invoiceId)
+    {
+        selectedInvoice = invoices.First(i => i.Id == invoiceId);
+        paymentForm = new CreatePaymentDto
+        {
+            PaymentDate = DateTime.Today,
+            Amount = selectedInvoice.BalanceAmount,
+            InvoiceId = invoiceId,
+            CustomerId = selectedInvoice.CustomerId,
+            PaymentMethod = PaymentMethod.BankTransfer
+        };
+        showPaymentModal = true;
+    }
+
+    private void ClosePaymentModal()
+    {
+        showPaymentModal = false;
+        selectedInvoice = null;
+        paymentForm = new CreatePaymentDto();
+    }
+
+    private async Task SavePayment()
+    {
+        if (selectedInvoice != null)
+        {
+            // Update invoice with payment
+            selectedInvoice.PaidAmount += paymentForm.Amount;
+            selectedInvoice.BalanceAmount -= paymentForm.Amount;
+            
+            if (selectedInvoice.BalanceAmount <= 0)
+            {
+                selectedInvoice.Status = InvoiceStatus.Paid;
+            }
+            else if (selectedInvoice.PaidAmount > 0)
+            {
+                selectedInvoice.Status = InvoiceStatus.PartiallyPaid;
+            }
+            
+            FilterInvoices();
+        }
+        
+        ClosePaymentModal();
+    }
+
+    private void PrintInvoice(int invoiceId)
+    {
+        // Generate PDF or print invoice
+        // Implementation would call a service to generate PDF
+    }
+
+    private void DeleteInvoice(int invoiceId)
+    {
+        if (confirm("Are you sure you want to delete this invoice?"))
+        {
+            invoices.RemoveAll(i => i.Id == invoiceId);
+            FilterInvoices();
+        }
+    }
+
+    private bool confirm(string message)
+    {
+        // In a real app, you'd use a proper confirmation dialog
+        return true;
+    }
+
+    private string GetStatusClass(InvoiceStatus status)
+    {
+        return status switch
+        {
+            InvoiceStatus.Draft => "secondary",
+            InvoiceStatus.Sent => "info",
+            InvoiceStatus.Paid => "success",
+            InvoiceStatus.PartiallyPaid => "warning",
+            InvoiceStatus.Overdue => "danger",
+            InvoiceStatus.Cancelled => "dark",
+            _ => "secondary"
+        };
+    }
+}

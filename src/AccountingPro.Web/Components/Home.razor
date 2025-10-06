@@ -1,0 +1,232 @@
+@page "/"
+@page "/home"
+
+<PageTitle>Dashboard - AccountingPro</PageTitle>
+
+<div class="dashboard-header">
+    <h1>AccountingPro Dashboard</h1>
+    <p class="text-muted">Complete accounting solution for your business</p>
+</div>
+
+<div class="dashboard-stats">
+    <div class="row">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon revenue">💰</div>
+                <div class="stat-content">
+                    <h3>$25,430</h3>
+                    <p>Total Revenue</p>
+                    <small class="text-success">+12% from last month</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon expenses">💸</div>
+                <div class="stat-content">
+                    <h3>$8,750</h3>
+                    <p>Total Expenses</p>
+                    <small class="text-danger">+5% from last month</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon invoices">📄</div>
+                <div class="stat-content">
+                    <h3>42</h3>
+                    <p>Pending Invoices</p>
+                    <small class="text-warning">$12,340 outstanding</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon profit">📈</div>
+                <div class="stat-content">
+                    <h3>$16,680</h3>
+                    <p>Net Profit</p>
+                    <small class="text-success">+18% from last month</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="feature-grid">
+    <div class="row">
+        <!-- Sales Features -->
+        <div class="col-lg-4 col-md-6">
+            <div class="feature-section">
+                <h2 class="section-title">💼 Sales Management</h2>
+                <div class="feature-card">
+                    <h4>Customer Management</h4>
+                    <p>Manage customer information, credit limits, and contact details</p>
+                    <a href="/customers" class="btn btn-primary">Manage Customers</a>
+                </div>
+                <div class="feature-card">
+                    <h4>Invoice Creation</h4>
+                    <p>Create professional invoices with automatic calculations</p>
+                    <a href="/invoices" class="btn btn-primary">Create Invoice</a>
+                </div>
+                <div class="feature-card">
+                    <h4>Payment Tracking</h4>
+                    <p>Track payments received and outstanding balances</p>
+                    <a href="/payments" class="btn btn-primary">View Payments</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Purchase Features -->
+        <div class="col-lg-4 col-md-6">
+            <div class="feature-section">
+                <h2 class="section-title">🛒 Purchase Management</h2>
+                <div class="feature-card">
+                    <h4>Supplier Management</h4>
+                    <p>Maintain supplier records and payment terms</p>
+                    <a href="/suppliers" class="btn btn-primary">Manage Suppliers</a>
+                </div>
+                <div class="feature-card">
+                    <h4>Bill Management</h4>
+                    <p>Record and track supplier bills and expenses</p>
+                    <a href="/bills" class="btn btn-primary">Manage Bills</a>
+                </div>
+                <div class="feature-card">
+                    <h4>Expense Tracking</h4>
+                    <p>Track all business expenses and payments made</p>
+                    <a href="/payments-made" class="btn btn-primary">View Expenses</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inventory Features -->
+        <div class="col-lg-4 col-md-6">
+            <div class="feature-section">
+                <h2 class="section-title">📦 Inventory & Products</h2>
+                <div class="feature-card">
+                    <h4>Product Catalog</h4>
+                    <p>Manage products, services, and pricing</p>
+                    <a href="/products" class="btn btn-primary">Manage Products</a>
+                </div>
+                <div class="feature-card">
+                    <h4>Stock Management</h4>
+                    <p>Track inventory levels and reorder points</p>
+                    <a href="/inventory" class="btn btn-primary">View Inventory</a>
+                </div>
+                <div class="feature-card">
+                    <h4>Cost Tracking</h4>
+                    <p>Monitor product costs and profit margins</p>
+                    <a href="/cost-analysis" class="btn btn-primary">Cost Analysis</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Accounting Features -->
+        <div class="col-lg-4 col-md-6">
+            <div class="feature-section">
+                <h2 class="section-title">📊 Core Accounting</h2>
+                <div class="feature-card">
+                    <h4>Chart of Accounts</h4>
+                    <p>Maintain your complete chart of accounts structure</p>
+                    <a href="/accounts" class="btn btn-primary">View Accounts</a>
+                </div>
+                <div class="feature-card">
+                    <h4>Journal Entries</h4>
+                    <p>Record manual journal entries and adjustments</p>
+                    <a href="/journal-entries" class="btn btn-primary">Journal Entries</a>
+                </div>
+                <div class="feature-card">
+                    <h4>Bank Reconciliation</h4>
+                    <p>Manage bank accounts and reconciliation</p>
+                    <a href="/bank-accounts" class="btn btn-primary">Bank Accounts</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Financial Reports -->
+        <div class="col-lg-4 col-md-6">
+            <div class="feature-section">
+                <h2 class="section-title">📈 Financial Reports</h2>
+                <div class="feature-card">
+                    <h4>Profit & Loss</h4>
+                    <p>Generate comprehensive P&L statements</p>
+                    <a href="/reports/profit-loss" class="btn btn-primary">P&L Report</a>
+                </div>
+                <div class="feature-card">
+                    <h4>Balance Sheet</h4>
+                    <p>View your company's financial position</p>
+                    <a href="/reports/balance-sheet" class="btn btn-primary">Balance Sheet</a>
+                </div>
+                <div class="feature-card">
+                    <h4>Cash Flow</h4>
+                    <p>Monitor cash inflows and outflows</p>
+                    <a href="/reports/cash-flow" class="btn btn-primary">Cash Flow</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tax & Compliance -->
+        <div class="col-lg-4 col-md-6">
+            <div class="feature-section">
+                <h2 class="section-title">📋 Tax & Compliance</h2>
+                <div class="feature-card">
+                    <h4>Tax Management</h4>
+                    <p>Configure and manage tax rates and calculations</p>
+                    <a href="/taxes" class="btn btn-primary">Manage Taxes</a>
+                </div>
+                <div class="feature-card">
+                    <h4>Tax Reports</h4>
+                    <p>Generate tax reports for compliance</p>
+                    <a href="/reports/tax" class="btn btn-primary">Tax Reports</a>
+                </div>
+                <div class="feature-card">
+                    <h4>Audit Trail</h4>
+                    <p>Complete audit trail for all transactions</p>
+                    <a href="/audit-trail" class="btn btn-primary">Audit Trail</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="quick-actions">
+    <h2>Quick Actions</h2>
+    <div class="row">
+        <div class="col-md-2">
+            <a href="/invoices/create" class="quick-action-btn">
+                <div class="icon">📄</div>
+                <span>New Invoice</span>
+            </a>
+        </div>
+        <div class="col-md-2">
+            <a href="/bills/create" class="quick-action-btn">
+                <div class="icon">📋</div>
+                <span>New Bill</span>
+            </a>
+        </div>
+        <div class="col-md-2">
+            <a href="/payments/create" class="quick-action-btn">
+                <div class="icon">💳</div>
+                <span>Record Payment</span>
+            </a>
+        </div>
+        <div class="col-md-2">
+            <a href="/customers/create" class="quick-action-btn">
+                <div class="icon">👥</div>
+                <span>Add Customer</span>
+            </a>
+        </div>
+        <div class="col-md-2">
+            <a href="/products/create" class="quick-action-btn">
+                <div class="icon">📦</div>
+                <span>Add Product</span>
+            </a>
+        </div>
+        <div class="col-md-2">
+            <a href="/journal-entries/create" class="quick-action-btn">
+                <div class="icon">✏️</div>
+                <span>Journal Entry</span>
+            </a>
+        </div>
+    </div>
+</div>

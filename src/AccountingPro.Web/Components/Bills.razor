@@ -1,0 +1,447 @@
+@page "/bills"
+@using AccountingPro.Application.DTOs
+@using AccountingPro.Core.Enums
+
+<div class="page-header">
+    <h1 class="page-title">Bills Management</h1>
+    <button class="btn btn-primary" @onclick="OpenCreateModal">
+        <i class="icon">➕</i> Create Bill
+    </button>
+</div>
+
+<div class="card">
+    <div class="search-bar">
+        <input type="text" @bind="searchText" @oninput="FilterBills" placeholder="Search bills..." class="search-input" />
+        <select @bind="selectedStatus" class="filter-select" @oninput="FilterBills">
+            <option value="">All Statuses</option>
+            <option value="@BillStatus.Draft">Draft</option>
+            <option value="@BillStatus.Received">Received</option>
+            <option value="@BillStatus.Paid">Paid</option>
+            <option value="@BillStatus.Overdue">Overdue</option>
+        </select>
+    </div>
+
+    <div class="table-container">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Bill #</th>
+                    <th>Supplier</th>
+                    <th>Date</th>
+                    <th>Due Date</th>
+                    <th>Amount</th>
+                    <th>Outstanding</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var bill in filteredBills)
+                {
+                    <tr>
+                        <td class="font-semibold">@bill.BillNumber</td>
+                        <td>@bill.SupplierName</td>
+                        <td>@bill.BillDate.ToString("MM/dd/yyyy")</td>
+                                <td class="@(bill.DueDate < DateTime.Now && bill.Status != BillStatus.Paid ? "text-danger" : "")">`
+                            @bill.DueDate.ToString("MM/dd/yyyy")
+                        </td>
+                        <td class="text-right">$@bill.TotalAmount.ToString("N2")</td>
+                        <td class="text-right">
+                            <span class="@(bill.OutstandingAmount > 0 ? "amount-negative" : "amount-positive")">
+                                $@bill.OutstandingAmount.ToString("N2")
+                            </span>
+                        </td>
+                        <td>
+                            <span class="status-badge @GetStatusClass(bill.Status)">
+                                @bill.Status
+                            </span>
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn-icon btn-edit" @onclick="() => EditBill(bill)" title="Edit">
+                                    ✏️
+                                </button>
+                                @if (bill.Status != BillStatus.Paid && bill.OutstandingAmount > 0)
+                                {
+                                    <button class="btn-icon btn-success" @onclick="() => RecordPayment(bill)" title="Record Payment">
+                                        💰
+                                    </button>
+                                }
+                                <button class="btn-icon btn-delete" @onclick="() => DeleteBill(bill.Id)" title="Delete">
+                                    🗑️
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        
+        @if (!filteredBills.Any())
+        {
+            <div class="empty-state">
+                <div class="empty-icon">📄</div>
+                <p class="empty-message">No bills found</p>
+                <p class="empty-description">Create your first bill to get started</p>
+            </div>
+        }
+    </div>
+</div>
+
+@if (showModal)
+{
+    <div class="modal-overlay" @onclick="CloseModal">
+        <div class="modal" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h2>@(isEditing ? "Edit" : "Create") Bill</h2>
+                <button class="modal-close" @onclick="CloseModal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Bill Number *</label>
+                        <input type="text" @bind="currentBill.BillNumber" class="form-input" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Supplier *</label>
+                        <select @bind="currentBill.SupplierId" class="form-input" required>
+                            <option value="">Select Supplier</option>
+                            @foreach (var supplier in availableSuppliers)
+                            {
+                                <option value="@supplier.Id">@supplier.CompanyName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Bill Date *</label>
+                        <input type="date" @bind="currentBill.BillDate" class="form-input" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Due Date *</label>
+                        <input type="date" @bind="currentBill.DueDate" class="form-input" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Subtotal</label>
+                        <input type="number" step="0.01" @bind="currentBill.SubTotal" class="form-input" @oninput="CalculateTotal" />
+                    </div>
+                    <div class="form-group">
+                        <label>Tax Amount</label>
+                        <input type="number" step="0.01" @bind="currentBill.TaxAmount" class="form-input" @oninput="CalculateTotal" />
+                    </div>
+                    <div class="form-group">
+                        <label>Total Amount</label>
+                        <input type="number" step="0.01" @bind="currentBill.TotalAmount" class="form-input" readonly />
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea @bind="currentBill.Description" class="form-input" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select @bind="currentBill.Status" class="form-input">
+                            <option value="Draft">Draft</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Paid">Paid</option>
+                            <option value="Overdue">Overdue</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                <button class="btn btn-primary" @onclick="SaveBill" disabled="@(!IsValidBill())">
+                    @(isEditing ? "Update" : "Save") Bill
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showPaymentModal)
+{
+    <div class="modal-overlay" @onclick="ClosePaymentModal">
+        <div class="modal" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h2>Record Payment - Bill @selectedBill?.BillNumber</h2>
+                <button class="modal-close" @onclick="ClosePaymentModal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="payment-info">
+                    <p><strong>Supplier:</strong> @selectedBill?.SupplierName</p>
+                    <p><strong>Total Amount:</strong> $@selectedBill?.TotalAmount.ToString("N2")</p>
+                    <p><strong>Outstanding:</strong> $@selectedBill?.OutstandingAmount.ToString("N2")</p>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Payment Amount *</label>
+                        <input type="number" step="0.01" @bind="paymentAmount" max="@selectedBill?.OutstandingAmount" class="form-input" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Payment Date *</label>
+                        <input type="date" @bind="paymentDate" class="form-input" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Payment Method</label>
+                        <select @bind="paymentMethod" class="form-input">
+                            <option value="Check">Check</option>
+                            <option value="Credit Card">Credit Card</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="Cash">Cash</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Reference Number</label>
+                        <input type="text" @bind="paymentReference" class="form-input" />
+                    </div>
+                    <div class="form-group col-span-2">
+                        <label>Notes</label>
+                        <textarea @bind="paymentNotes" class="form-input" rows="3"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="ClosePaymentModal">Cancel</button>
+                <button class="btn btn-primary" @onclick="SavePayment" disabled="@(paymentAmount <= 0 || paymentAmount > selectedBill?.OutstandingAmount)">
+                    Record Payment
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<BillDto> bills = new();
+    private List<BillDto> filteredBills = new();
+    private List<SupplierDto> availableSuppliers = new();
+    private BillDto currentBill = new();
+    private BillDto? selectedBill;
+    private bool showModal = false;
+    private bool showPaymentModal = false;
+    private bool isEditing = false;
+    private string searchText = "";
+    private BillStatus? selectedStatus = null;
+
+    // Payment fields
+    private decimal paymentAmount = 0;
+    private DateTime paymentDate = DateTime.Today;
+    private string paymentMethod = "Check";
+    private string paymentReference = "";
+    private string paymentNotes = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Initialize sample suppliers
+        availableSuppliers = new List<SupplierDto>
+        {
+            new SupplierDto { Id = 1, CompanyName = "TechCorp Solutions" },
+            new SupplierDto { Id = 2, CompanyName = "Office Supplies Inc" },
+            new SupplierDto { Id = 3, CompanyName = "Global Manufacturing" }
+        };
+
+        // Initialize with sample data
+        bills = new List<BillDto>
+        {
+            new BillDto
+            {
+                Id = 1,
+                BillNumber = "BILL-001",
+                SupplierId = 1,
+                SupplierName = "TechCorp Solutions",
+                BillDate = DateTime.Today.AddDays(-10),
+                DueDate = DateTime.Today.AddDays(20),
+                SubTotal = 2500.00m,
+                TaxAmount = 250.00m,
+                TotalAmount = 2750.00m,
+                OutstandingAmount = 2750.00m,
+                Description = "Software licensing and support",
+                Status = BillStatus.Received
+            },
+            new BillDto
+            {
+                Id = 2,
+                BillNumber = "BILL-002",
+                SupplierId = 2,
+                SupplierName = "Office Supplies Inc",
+                BillDate = DateTime.Today.AddDays(-5),
+                DueDate = DateTime.Today.AddDays(25),
+                SubTotal = 450.00m,
+                TaxAmount = 45.00m,
+                TotalAmount = 495.00m,
+                OutstandingAmount = 0.00m,
+                Description = "Office supplies and stationery",
+                Status = BillStatus.Paid
+            },
+            new BillDto
+            {
+                Id = 3,
+                BillNumber = "BILL-003",
+                SupplierId = 3,
+                SupplierName = "Global Manufacturing",
+                BillDate = DateTime.Today.AddDays(-30),
+                DueDate = DateTime.Today.AddDays(-15),
+                SubTotal = 8500.00m,
+                TaxAmount = 850.00m,
+                TotalAmount = 9350.00m,
+                OutstandingAmount = 9350.00m,
+                Description = "Manufacturing equipment and parts",
+                Status = BillStatus.Overdue
+            }
+        };
+        
+        filteredBills = bills.ToList();
+    }
+
+    private void OpenCreateModal()
+    {
+        currentBill = new BillDto 
+        { 
+            BillDate = DateTime.Today, 
+            DueDate = DateTime.Today.AddDays(30),
+            Status = BillStatus.Draft
+        };
+        isEditing = false;
+        showModal = true;
+    }
+
+    private void EditBill(BillDto bill)
+    {
+        currentBill = new BillDto
+        {
+            Id = bill.Id,
+            BillNumber = bill.BillNumber,
+            SupplierId = bill.SupplierId,
+            SupplierName = bill.SupplierName,
+            BillDate = bill.BillDate,
+            DueDate = bill.DueDate,
+            SubTotal = bill.SubTotal,
+            TaxAmount = bill.TaxAmount,
+            TotalAmount = bill.TotalAmount,
+            OutstandingAmount = bill.OutstandingAmount,
+            Description = bill.Description,
+            Status = bill.Status
+        };
+        isEditing = true;
+        showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        currentBill = new BillDto();
+    }
+
+    private void RecordPayment(BillDto bill)
+    {
+        selectedBill = bill;
+        paymentAmount = bill.OutstandingAmount;
+        paymentDate = DateTime.Today;
+        paymentMethod = "Check";
+        paymentReference = "";
+        paymentNotes = "";
+        showPaymentModal = true;
+    }
+
+    private void ClosePaymentModal()
+    {
+        showPaymentModal = false;
+        selectedBill = null;
+    }
+
+    private async Task SavePayment()
+    {
+        if (selectedBill != null && paymentAmount > 0)
+        {
+            var bill = bills.FirstOrDefault(b => b.Id == selectedBill.Id);
+            if (bill != null)
+            {
+                bill.OutstandingAmount -= paymentAmount;
+                if (bill.OutstandingAmount <= 0)
+                {
+                    bill.Status = BillStatus.Paid;
+                }
+            }
+            
+            FilterBills();
+            ClosePaymentModal();
+        }
+    }
+
+    private void CalculateTotal()
+    {
+        currentBill.TotalAmount = currentBill.SubTotal + currentBill.TaxAmount;
+    }
+
+    private bool IsValidBill()
+    {
+        return !string.IsNullOrWhiteSpace(currentBill.BillNumber) && 
+               currentBill.SupplierId > 0 &&
+               currentBill.TotalAmount > 0;
+    }
+
+    private async Task SaveBill()
+    {
+        if (!IsValidBill())
+            return;
+
+        var supplier = availableSuppliers.FirstOrDefault(s => s.Id == currentBill.SupplierId);
+        if (supplier != null)
+        {
+            currentBill.SupplierName = supplier.CompanyName;
+        }
+
+        if (isEditing)
+        {
+            var existingBill = bills.FirstOrDefault(b => b.Id == currentBill.Id);
+            if (existingBill != null)
+            {
+                existingBill.BillNumber = currentBill.BillNumber;
+                existingBill.SupplierId = currentBill.SupplierId;
+                existingBill.SupplierName = currentBill.SupplierName;
+                existingBill.BillDate = currentBill.BillDate;
+                existingBill.DueDate = currentBill.DueDate;
+                existingBill.SubTotal = currentBill.SubTotal;
+                existingBill.TaxAmount = currentBill.TaxAmount;
+                existingBill.TotalAmount = currentBill.TotalAmount;
+                existingBill.Description = currentBill.Description;
+                existingBill.Status = currentBill.Status;
+            }
+        }
+        else
+        {
+            currentBill.Id = bills.Count > 0 ? bills.Max(b => b.Id) + 1 : 1;
+            currentBill.OutstandingAmount = currentBill.TotalAmount;
+            bills.Add(currentBill);
+        }
+
+        FilterBills();
+        CloseModal();
+    }
+
+    private void DeleteBill(int id)
+    {
+        bills.RemoveAll(b => b.Id == id);
+        FilterBills();
+    }
+
+    private void FilterBills()
+    {
+        filteredBills = bills.Where(b =>
+            (string.IsNullOrEmpty(searchText) || 
+             b.BillNumber.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+             b.SupplierName?.Contains(searchText, StringComparison.OrdinalIgnoreCase) == true) &&
+            (selectedStatus == null || b.Status == selectedStatus)
+        ).ToList();
+    }
+
+    private string GetStatusClass(BillStatus status)
+    {
+        return status switch
+        {
+            BillStatus.Paid => "status-active",
+            BillStatus.Received => "status-pending",
+            BillStatus.Overdue => "status-danger",
+            BillStatus.Draft => "status-inactive",
+            _ => "status-pending"
+        };
+    }
+}

@@ -1,0 +1,471 @@
+@page "/reports"
+@using AccountingPro.Application.DTOs
+@using AccountingPro.Core.Enums
+
+<div class="page-header">
+    <h1 class="page-title">Financial Reports</h1>
+    <button class="btn btn-secondary" @onclick="RefreshReports">
+        <i class="icon">🔄</i> Refresh Data
+    </button>
+</div>
+
+<div class="reports-grid">
+    <!-- Quick Stats Cards -->
+    <div class="stats-cards">
+        <div class="stat-card revenue">
+            <div class="stat-icon">💰</div>
+            <div class="stat-content">
+                <h3>Total Revenue</h3>
+                <p class="stat-value">$@totalRevenue.ToString("N2")</p>
+                <p class="stat-change positive">+12.5% from last month</p>
+            </div>
+        </div>
+        
+        <div class="stat-card expenses">
+            <div class="stat-icon">💸</div>
+            <div class="stat-content">
+                <h3>Total Expenses</h3>
+                <p class="stat-value">$@totalExpenses.ToString("N2")</p>
+                <p class="stat-change negative">+8.3% from last month</p>
+            </div>
+        </div>
+        
+        <div class="stat-card profit">
+            <div class="stat-icon">📈</div>
+            <div class="stat-content">
+                <h3>Net Profit</h3>
+                <p class="stat-value">$@netProfit.ToString("N2")</p>
+                <p class="stat-change @(netProfit > 0 ? "positive" : "negative")">
+                    @((netProfit > 0 ? "+" : ""))@(((netProfit / (totalRevenue == 0 ? 1 : totalRevenue)) * 100).ToString("F1"))% margin
+                </p>
+            </div>
+        </div>
+        
+        <div class="stat-card ar">
+            <div class="stat-icon">📋</div>
+            <div class="stat-content">
+                <h3>Accounts Receivable</h3>
+                <p class="stat-value">$@accountsReceivable.ToString("N2")</p>
+                <p class="stat-change neutral">@outstandingInvoices invoices pending</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Sections -->
+    <div class="report-sections">
+        <!-- Profit & Loss -->
+        <div class="card report-card">
+            <div class="card-header">
+                <h2>Profit & Loss Statement</h2>
+                <div class="report-controls">
+                    <select @bind="selectedPeriod"  class="form-input">
+                        <option value="current_month">Current Month</option>
+                        <option value="last_month">Last Month</option>
+                        <option value="quarter">This Quarter</option>
+                        <option value="year">This Year</option>
+                    </select>
+                    <button class="btn btn-sm btn-secondary" @onclick="ExportPL">Export</button>
+                </div>
+            </div>
+            <div class="report-content">
+                <table class="financial-table">
+                    <thead>
+                        <tr>
+                            <th>Account</th>
+                            <th class="text-right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="section-header">
+                            <td><strong>REVENUE</strong></td>
+                            <td></td>
+                        </tr>
+                        @foreach (var item in revenueItems)
+                        {
+                            <tr>
+                                <td class="indent">@item.AccountName</td>
+                                <td class="text-right">$@item.Amount.ToString("N2")</td>
+                            </tr>
+                        }
+                        <tr class="subtotal">
+                            <td><strong>Total Revenue</strong></td>
+                            <td class="text-right"><strong>$@totalRevenue.ToString("N2")</strong></td>
+                        </tr>
+                        
+                        <tr class="section-header">
+                            <td><strong>COST OF GOODS SOLD</strong></td>
+                            <td></td>
+                        </tr>
+                        @foreach (var item in cogsItems)
+                        {
+                            <tr>
+                                <td class="indent">@item.AccountName</td>
+                                <td class="text-right">$@item.Amount.ToString("N2")</td>
+                            </tr>
+                        }
+                        <tr class="subtotal">
+                            <td><strong>Total COGS</strong></td>
+                            <td class="text-right"><strong>$@totalCogs.ToString("N2")</strong></td>
+                        </tr>
+                        
+                        <tr class="gross-profit">
+                            <td><strong>GROSS PROFIT</strong></td>
+                            <td class="text-right"><strong>$@(totalRevenue - totalCogs).ToString("N2")</strong></td>
+                        </tr>
+                        
+                        <tr class="section-header">
+                            <td><strong>EXPENSES</strong></td>
+                            <td></td>
+                        </tr>
+                        @foreach (var item in expenseItems)
+                        {
+                            <tr>
+                                <td class="indent">@item.AccountName</td>
+                                <td class="text-right">$@item.Amount.ToString("N2")</td>
+                            </tr>
+                        }
+                        <tr class="subtotal">
+                            <td><strong>Total Expenses</strong></td>
+                            <td class="text-right"><strong>$@totalExpenses.ToString("N2")</strong></td>
+                        </tr>
+                        
+                        <tr class="net-income">
+                            <td><strong>NET INCOME</strong></td>
+                            <td class="text-right"><strong>$@netProfit.ToString("N2")</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Balance Sheet -->
+        <div class="card report-card">
+            <div class="card-header">
+                <h2>Balance Sheet</h2>
+                <div class="report-controls">
+                    <span class="report-date">As of @DateTime.Today.ToString("MMM dd, yyyy")</span>
+                    <button class="btn btn-sm btn-secondary" @onclick="ExportBS">Export</button>
+                </div>
+            </div>
+            <div class="report-content">
+                <table class="financial-table">
+                    <thead>
+                        <tr>
+                            <th>Account</th>
+                            <th class="text-right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="section-header">
+                            <td><strong>ASSETS</strong></td>
+                            <td></td>
+                        </tr>
+                        <tr class="subsection-header">
+                            <td><em>Current Assets</em></td>
+                            <td></td>
+                        </tr>
+                        @foreach (var item in currentAssets)
+                        {
+                            <tr>
+                                <td class="indent">@item.AccountName</td>
+                                <td class="text-right">$@item.Amount.ToString("N2")</td>
+                            </tr>
+                        }
+                        <tr class="subtotal">
+                            <td><strong>Total Current Assets</strong></td>
+                            <td class="text-right"><strong>$@currentAssets.Sum(a => a.Amount).ToString("N2")</strong></td>
+                        </tr>
+                        
+                        <tr class="subsection-header">
+                            <td><em>Fixed Assets</em></td>
+                            <td></td>
+                        </tr>
+                        @foreach (var item in fixedAssets)
+                        {
+                            <tr>
+                                <td class="indent">@item.AccountName</td>
+                                <td class="text-right">$@item.Amount.ToString("N2")</td>
+                            </tr>
+                        }
+                        <tr class="subtotal">
+                            <td><strong>Total Fixed Assets</strong></td>
+                            <td class="text-right"><strong>$@fixedAssets.Sum(a => a.Amount).ToString("N2")</strong></td>
+                        </tr>
+                        
+                        <tr class="total">
+                            <td><strong>TOTAL ASSETS</strong></td>
+                            <td class="text-right"><strong>$@totalAssets.ToString("N2")</strong></td>
+                        </tr>
+                        
+                        <tr class="section-header">
+                            <td><strong>LIABILITIES</strong></td>
+                            <td></td>
+                        </tr>
+                        @foreach (var item in liabilities)
+                        {
+                            <tr>
+                                <td class="indent">@item.AccountName</td>
+                                <td class="text-right">$@item.Amount.ToString("N2")</td>
+                            </tr>
+                        }
+                        <tr class="subtotal">
+                            <td><strong>Total Liabilities</strong></td>
+                            <td class="text-right"><strong>$@totalLiabilities.ToString("N2")</strong></td>
+                        </tr>
+                        
+                        <tr class="section-header">
+                            <td><strong>EQUITY</strong></td>
+                            <td></td>
+                        </tr>
+                        @foreach (var item in equity)
+                        {
+                            <tr>
+                                <td class="indent">@item.AccountName</td>
+                                <td class="text-right">$@item.Amount.ToString("N2")</td>
+                            </tr>
+                        }
+                        <tr class="subtotal">
+                            <td><strong>Total Equity</strong></td>
+                            <td class="text-right"><strong>$@totalEquity.ToString("N2")</strong></td>
+                        </tr>
+                        
+                        <tr class="total">
+                            <td><strong>TOTAL LIABILITIES & EQUITY</strong></td>
+                            <td class="text-right"><strong>$@(totalLiabilities + totalEquity).ToString("N2")</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Cash Flow -->
+        <div class="card report-card">
+            <div class="card-header">
+                <h2>Cash Flow Statement</h2>
+                <div class="report-controls">
+                    <select @bind="selectedCashFlowPeriod"  class="form-input">
+                        <option value="current_month">Current Month</option>
+                        <option value="last_month">Last Month</option>
+                        <option value="quarter">This Quarter</option>
+                    </select>
+                    <button class="btn btn-sm btn-secondary" @onclick="ExportCF">Export</button>
+                </div>
+            </div>
+            <div class="report-content">
+                <table class="financial-table">
+                    <thead>
+                        <tr>
+                            <th>Cash Flow Category</th>
+                            <th class="text-right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="section-header">
+                            <td><strong>OPERATING ACTIVITIES</strong></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td class="indent">Net Income</td>
+                            <td class="text-right">$@netProfit.ToString("N2")</td>
+                        </tr>
+                        <tr>
+                            <td class="indent">Accounts Receivable Changes</td>
+                            <td class="text-right">$@(-2500.00m).ToString("N2")</td>
+                        </tr>
+                        <tr>
+                            <td class="indent">Accounts Payable Changes</td>
+                            <td class="text-right">$@(1800.00m).ToString("N2")</td>
+                        </tr>
+                        <tr>
+                            <td class="indent">Inventory Changes</td>
+                            <td class="text-right">$@(-1200.00m).ToString("N2")</td>
+                        </tr>
+                        <tr class="subtotal">
+                            <td><strong>Net Cash from Operating Activities</strong></td>
+                            <td class="text-right"><strong>$@(netProfit - 2500 + 1800 - 1200).ToString("N2")</strong></td>
+                        </tr>
+                        
+                        <tr class="section-header">
+                            <td><strong>INVESTING ACTIVITIES</strong></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td class="indent">Equipment Purchases</td>
+                            <td class="text-right">$@(-5000.00m).ToString("N2")</td>
+                        </tr>
+                        <tr class="subtotal">
+                            <td><strong>Net Cash from Investing Activities</strong></td>
+                            <td class="text-right"><strong>$@(-5000.00m).ToString("N2")</strong></td>
+                        </tr>
+                        
+                        <tr class="section-header">
+                            <td><strong>FINANCING ACTIVITIES</strong></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td class="indent">Loan Proceeds</td>
+                            <td class="text-right">$@(10000.00m).ToString("N2")</td>
+                        </tr>
+                        <tr>
+                            <td class="indent">Loan Payments</td>
+                            <td class="text-right">$@(-1500.00m).ToString("N2")</td>
+                        </tr>
+                        <tr class="subtotal">
+                            <td><strong>Net Cash from Financing Activities</strong></td>
+                            <td class="text-right"><strong>$@(8500.00m).ToString("N2")</strong></td>
+                        </tr>
+                        
+                        <tr class="total">
+                            <td><strong>NET CHANGE IN CASH</strong></td>
+                            <td class="text-right"><strong>$@(netProfit - 2500 + 1800 - 1200 - 5000 + 8500).ToString("N2")</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string selectedPeriod = "current_month";
+    private string selectedCashFlowPeriod = "current_month";
+    
+    // Financial Data
+    private decimal totalRevenue = 0;
+    private decimal totalExpenses = 0;
+    private decimal totalCogs = 0;
+    private decimal netProfit = 0;
+    private decimal accountsReceivable = 0;
+    private decimal totalAssets = 0;
+    private decimal totalLiabilities = 0;
+    private decimal totalEquity = 0;
+    private int outstandingInvoices = 0;
+    
+    private List<FinancialLineItem> revenueItems = new();
+    private List<FinancialLineItem> expenseItems = new();
+    private List<FinancialLineItem> cogsItems = new();
+    private List<FinancialLineItem> currentAssets = new();
+    private List<FinancialLineItem> fixedAssets = new();
+    private List<FinancialLineItem> liabilities = new();
+    private List<FinancialLineItem> equity = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFinancialData();
+    }
+
+    private async Task LoadFinancialData()
+    {
+        // Sample financial data - in real app, this would come from your accounting system
+        revenueItems = new List<FinancialLineItem>
+        {
+            new() { AccountName = "Sales Revenue", Amount = 125000.00m },
+            new() { AccountName = "Service Revenue", Amount = 45000.00m },
+            new() { AccountName = "Other Income", Amount = 2500.00m }
+        };
+        
+        cogsItems = new List<FinancialLineItem>
+        {
+            new() { AccountName = "Cost of Products Sold", Amount = 35000.00m },
+            new() { AccountName = "Direct Labor", Amount = 20000.00m },
+            new() { AccountName = "Materials", Amount = 15000.00m }
+        };
+        
+        expenseItems = new List<FinancialLineItem>
+        {
+            new() { AccountName = "Rent Expense", Amount = 8000.00m },
+            new() { AccountName = "Utilities", Amount = 1200.00m },
+            new() { AccountName = "Office Supplies", Amount = 850.00m },
+            new() { AccountName = "Professional Services", Amount = 3500.00m },
+            new() { AccountName = "Insurance", Amount = 2200.00m },
+            new() { AccountName = "Marketing", Amount = 4500.00m },
+            new() { AccountName = "Travel", Amount = 1800.00m },
+            new() { AccountName = "Software Subscriptions", Amount = 2400.00m }
+        };
+        
+        currentAssets = new List<FinancialLineItem>
+        {
+            new() { AccountName = "Cash and Cash Equivalents", Amount = 45000.00m },
+            new() { AccountName = "Accounts Receivable", Amount = 28500.00m },
+            new() { AccountName = "Inventory", Amount = 15000.00m },
+            new() { AccountName = "Prepaid Expenses", Amount = 3200.00m }
+        };
+        
+        fixedAssets = new List<FinancialLineItem>
+        {
+            new() { AccountName = "Equipment", Amount = 35000.00m },
+            new() { AccountName = "Furniture & Fixtures", Amount = 12000.00m },
+            new() { AccountName = "Accumulated Depreciation", Amount = -8500.00m }
+        };
+        
+        liabilities = new List<FinancialLineItem>
+        {
+            new() { AccountName = "Accounts Payable", Amount = 18500.00m },
+            new() { AccountName = "Accrued Expenses", Amount = 4200.00m },
+            new() { AccountName = "Short-term Loan", Amount = 15000.00m },
+            new() { AccountName = "Long-term Debt", Amount = 25000.00m }
+        };
+        
+        equity = new List<FinancialLineItem>
+        {
+            new() { AccountName = "Owner's Equity", Amount = 50000.00m },
+            new() { AccountName = "Retained Earnings", Amount = 18000.00m }
+        };
+        
+        CalculateTotals();
+    }
+    
+    private void CalculateTotals()
+    {
+        totalRevenue = revenueItems.Sum(i => i.Amount);
+        totalCogs = cogsItems.Sum(i => i.Amount);
+        totalExpenses = expenseItems.Sum(i => i.Amount);
+        netProfit = totalRevenue - totalCogs - totalExpenses;
+        
+        accountsReceivable = currentAssets.FirstOrDefault(a => a.AccountName.Contains("Receivable"))?.Amount ?? 0;
+        outstandingInvoices = 12; // Sample count
+        
+        totalAssets = currentAssets.Sum(a => a.Amount) + fixedAssets.Sum(a => a.Amount);
+        totalLiabilities = liabilities.Sum(l => l.Amount);
+        totalEquity = equity.Sum(e => e.Amount);
+    }
+    
+    private void UpdateReports()
+    {
+        // In a real app, you would load different data based on the selected period
+        StateHasChanged();
+    }
+    
+    private void UpdateCashFlow()
+    {
+        // In a real app, you would load different cash flow data based on the selected period
+        StateHasChanged();
+    }
+    
+    private void RefreshReports()
+    {
+        LoadFinancialData();
+    }
+    
+    private void ExportPL()
+    {
+        // Implementation for exporting P&L to PDF/Excel
+        // This would typically involve a service call to generate the report
+    }
+    
+    private void ExportBS()
+    {
+        // Implementation for exporting Balance Sheet to PDF/Excel
+    }
+    
+    private void ExportCF()
+    {
+        // Implementation for exporting Cash Flow to PDF/Excel
+    }
+    
+    public class FinancialLineItem
+    {
+        public string AccountName { get; set; } = "";
+        public decimal Amount { get; set; }
+    }
+}
