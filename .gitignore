@@ -355,3 +355,9 @@ MigrationBackup/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+src/AccountingPro.Api/appsettings.json
+src/AccountingPro.Api/appsettings.Development.json
+src/AccountingPro.Web/appsettings.json
+src/AccountingPro.Api/appsettings.Development.json
+src/AccountingPro.Api/appsettings.json
+src/AccountingPro.Web/appsettings.json

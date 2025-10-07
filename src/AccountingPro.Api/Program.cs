@@ -1,7 +1,7 @@
-using Microsoft.EntityFrameworkCore;
+using System.Reflection;
 using AccountingPro.Infrastructure.Data;
 using MediatR;
-using System.Reflection;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,14 +11,17 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // Add Entity Framework
-builder.Services.AddDbContext<AccountingDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<AccountingDbContext>(
+    options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
+);
 
 // Add MediatR
-builder.Services.AddMediatR(cfg => {
+builder.Services.AddMediatR(cfg =>
+{
     cfg.RegisterServicesFromAssemblies(
         Assembly.GetExecutingAssembly(),
-        typeof(AccountingPro.Application.DTOs.CompanyDto).Assembly);
+        typeof(AccountingPro.Application.DTOs.CompanyDto).Assembly
+    );
 });
 
 // Add AutoMapper
@@ -27,13 +30,16 @@ builder.Services.AddAutoMapper(typeof(AccountingPro.Application.DTOs.CompanyDto)
 // Add CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowBlazorApp",
+    options.AddPolicy(
+        "AllowBlazorApp",
         policy =>
         {
-            policy.WithOrigins("https://localhost:7001", "http://localhost:5001")
-                  .AllowAnyHeader()
-                  .AllowAnyMethod();
-        });
+            policy
+                .WithOrigins("https://localhost:7001", "http://localhost:5001")
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        }
+    );
 });
 
 var app = builder.Build();

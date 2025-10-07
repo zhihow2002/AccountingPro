@@ -18,5 +18,6 @@ public class Account : BaseEntity
     public virtual Company Company { get; set; } = null!;
     public virtual Account? ParentAccount { get; set; }
     public virtual ICollection<Account> ChildAccounts { get; set; } = new List<Account>();
-    public virtual ICollection<JournalEntryLine> JournalEntryLines { get; set; } = new List<JournalEntryLine>();
+    public virtual ICollection<JournalEntryLine> JournalEntryLines { get; set; } =
+        new List<JournalEntryLine>();
 }

@@ -5,7 +5,7 @@
 <div class="page-header">
     <h1 class="page-title">Supplier Management</h1>
     <button class="btn btn-primary" @onclick="OpenCreateModal">
-        <i class="icon">➕</i> Add Supplier
+        <i class="fas fa-plus"></i> Add Supplier
     </button>
 </div>
 
@@ -16,6 +16,7 @@
             <option value="">All Statuses</option>
             <option value="Active">Active</option>
             <option value="Inactive">Inactive</option>
+            <option value="Suspended">Suspended</option>
         </select>
     </div>
 
@@ -54,11 +55,11 @@
                         </td>
                         <td>
                             <div class="action-buttons">
-                                <button class="btn-icon btn-edit" @onclick="() => EditSupplier(supplier)" title="Edit">
-                                    ✏️
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => EditSupplier(supplier)" title="Edit">
+                                    <i class="fas fa-edit"></i>
                                 </button>
-                                <button class="btn-icon btn-delete" @onclick="() => DeleteSupplier(supplier.Id)" title="Delete">
-                                    🗑️
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteSupplier(supplier.Id)" title="Delete">
+                                    <i class="fas fa-trash"></i>
                                 </button>
                             </div>
                         </td>
@@ -186,7 +187,7 @@
                 TaxId = "12-3456789",
                 PaymentTerms = "Net30",
                 OutstandingBalance = 2500.00m,
-                Status = "Active"
+                Status = SupplierStatus.Active
             },
             new SupplierDto
             {
@@ -203,7 +204,7 @@
                 TaxId = "98-7654321",
                 PaymentTerms = "Net15",
                 OutstandingBalance = 0.00m,
-                Status = "Active"
+                Status = SupplierStatus.Active
             },
             new SupplierDto
             {
@@ -220,7 +221,7 @@
                 TaxId = "45-6789012",
                 PaymentTerms = "Net60",
                 OutstandingBalance = 8750.50m,
-                Status = "Active"
+                Status = SupplierStatus.Active
             }
         };
         
@@ -229,7 +230,7 @@
 
     private void OpenCreateModal()
     {
-        currentSupplier = new SupplierDto { Status = "Active", PaymentTerms = "Net30", Country = "USA" };
+        currentSupplier = new SupplierDto { Status = SupplierStatus.Active, PaymentTerms = "Net30", Country = "USA" };
         isEditing = false;
         showModal = true;
     }
@@ -310,16 +311,17 @@
              s.CompanyName.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
              s.ContactPerson?.Contains(searchText, StringComparison.OrdinalIgnoreCase) == true ||
              s.Email?.Contains(searchText, StringComparison.OrdinalIgnoreCase) == true) &&
-            (string.IsNullOrEmpty(selectedStatus) || s.Status == selectedStatus)
+            (string.IsNullOrEmpty(selectedStatus) || s.Status.ToString() == selectedStatus)
         ).ToList();
     }
 
-    private string GetStatusClass(string status)
+    private string GetStatusClass(SupplierStatus status)
     {
-        return status?.ToLower() switch
+        return status switch
         {
-            "active" => "status-active",
-            "inactive" => "status-inactive",
+            SupplierStatus.Active => "status-active",
+            SupplierStatus.Inactive => "status-inactive",
+            SupplierStatus.Suspended => "status-suspended",
             _ => "status-pending"
         };
     }

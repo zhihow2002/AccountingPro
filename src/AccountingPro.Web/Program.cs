@@ -52,11 +52,16 @@ app.MapRazorPages();
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
 
-// Ensure database is created
+// Initialize database and seed data
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AccountingDbContext>();
-    context.Database.EnsureCreated();
+    
+    // Apply any pending migrations
+    await context.Database.MigrateAsync();
+    
+    // Seed initial data
+    await DataSeeder.SeedDataAsync(context);
 }
 
-app.Run();
+await app.RunAsync();

@@ -5,7 +5,7 @@
 <div class="page-header">
     <h1 class="page-title">Product Inventory</h1>
     <button class="btn btn-primary" @onclick="OpenCreateModal">
-        <i class="icon">➕</i> Add Product
+        <i class="fas fa-plus"></i> Add Product
     </button>
 </div>
 
@@ -85,17 +85,17 @@
                         </td>
                         <td>
                             <div class="action-buttons">
-                                <button class="btn-icon btn-edit" @onclick="() => EditProduct(product)" title="Edit">
-                                    ✏️
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => EditProduct(product)" title="Edit">
+                                    <i class="fas fa-edit"></i>
                                 </button>
                                 @if (product.Type == "Product")
                                 {
-                                    <button class="btn-icon btn-info" @onclick="() => AdjustInventory(product)" title="Adjust Inventory">
-                                        📦
+                                    <button class="btn btn-sm btn-outline-info" @onclick="() => AdjustInventory(product)" title="Adjust Inventory">
+                                        <i class="fas fa-boxes"></i>
                                     </button>
                                 }
-                                <button class="btn-icon btn-delete" @onclick="() => DeleteProduct(product.Id)" title="Delete">
-                                    🗑️
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteProduct(product.Id)" title="Delete">
+                                    <i class="fas fa-trash"></i>
                                 </button>
                             </div>
                         </td>

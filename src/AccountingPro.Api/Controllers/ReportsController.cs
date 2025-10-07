@@ -1,7 +1,7 @@
-using Microsoft.AspNetCore.Mvc;
-using MediatR;
-using AccountingPro.Application.Queries;
 using AccountingPro.Application.DTOs;
+using AccountingPro.Application.Queries;
+using MediatR;
+using Microsoft.AspNetCore.Mvc;
 
 namespace AccountingPro.Api.Controllers;
 
@@ -19,14 +19,11 @@ public class ReportsController : ControllerBase
     [HttpGet("balance-sheet")]
     public async Task<ActionResult<BalanceSheetDto>> GetBalanceSheet(
         [FromQuery] int companyId,
-        [FromQuery] DateTime asOfDate)
+        [FromQuery] DateTime asOfDate
+    )
     {
-        var query = new GetBalanceSheetQuery 
-        { 
-            CompanyId = companyId, 
-            AsOfDate = asOfDate 
-        };
-        
+        var query = new GetBalanceSheetQuery { CompanyId = companyId, AsOfDate = asOfDate };
+
         var result = await _mediator.Send(query);
         return Ok(result);
     }
@@ -35,15 +32,16 @@ public class ReportsController : ControllerBase
     public async Task<ActionResult<IncomeStatementDto>> GetIncomeStatement(
         [FromQuery] int companyId,
         [FromQuery] DateTime startDate,
-        [FromQuery] DateTime endDate)
+        [FromQuery] DateTime endDate
+    )
     {
-        var query = new GetIncomeStatementQuery 
-        { 
-            CompanyId = companyId, 
-            StartDate = startDate, 
-            EndDate = endDate 
+        var query = new GetIncomeStatementQuery
+        {
+            CompanyId = companyId,
+            StartDate = startDate,
+            EndDate = endDate
         };
-        
+
         var result = await _mediator.Send(query);
         return Ok(result);
     }

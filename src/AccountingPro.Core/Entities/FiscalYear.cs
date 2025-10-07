@@ -14,5 +14,6 @@ public class FiscalYear : BaseEntity
 
     // Navigation properties
     public virtual Company Company { get; set; } = null!;
-    public virtual ICollection<AccountingPeriod> AccountingPeriods { get; set; } = new List<AccountingPeriod>();
+    public virtual ICollection<AccountingPeriod> AccountingPeriods { get; set; } =
+        new List<AccountingPeriod>();
 }

@@ -21,5 +21,6 @@ public class JournalEntry : BaseEntity
     // Navigation properties
     public virtual Company Company { get; set; } = null!;
     public virtual JournalEntry? ReversalOfEntry { get; set; }
-    public virtual ICollection<JournalEntryLine> JournalEntryLines { get; set; } = new List<JournalEntryLine>();
+    public virtual ICollection<JournalEntryLine> JournalEntryLines { get; set; } =
+        new List<JournalEntryLine>();
 }

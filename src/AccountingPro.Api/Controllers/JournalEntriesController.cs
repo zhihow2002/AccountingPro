@@ -1,8 +1,8 @@
-using Microsoft.AspNetCore.Mvc;
-using MediatR;
 using AccountingPro.Application.Commands;
-using AccountingPro.Application.Queries;
 using AccountingPro.Application.DTOs;
+using AccountingPro.Application.Queries;
+using MediatR;
+using Microsoft.AspNetCore.Mvc;
 
 namespace AccountingPro.Api.Controllers;
 
@@ -21,7 +21,8 @@ public class JournalEntriesController : ControllerBase
     public async Task<ActionResult<List<JournalEntryDto>>> GetJournalEntries(
         [FromQuery] int companyId,
         [FromQuery] DateTime? startDate = null,
-        [FromQuery] DateTime? endDate = null)
+        [FromQuery] DateTime? endDate = null
+    )
     {
         var query = new GetJournalEntriesQuery
         {
@@ -47,7 +48,9 @@ public class JournalEntriesController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<JournalEntryDto>> CreateJournalEntry([FromBody] CreateJournalEntryDto dto)
+    public async Task<ActionResult<JournalEntryDto>> CreateJournalEntry(
+        [FromBody] CreateJournalEntryDto dto
+    )
     {
         var command = new CreateJournalEntryCommand { JournalEntry = dto };
         var result = await _mediator.Send(command);

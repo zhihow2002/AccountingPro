@@ -41,14 +41,15 @@ public enum CustomerStatus
 {
     Active = 1,
     Inactive = 2,
-    Blocked = 3
+    Suspended = 3,
+    Blocked = 4
 }
 
 public enum SupplierStatus
 {
     Active = 1,
     Inactive = 2,
-    Blocked = 3
+    Suspended = 3
 }
 
 public enum InvoiceStatus
@@ -58,27 +59,17 @@ public enum InvoiceStatus
     Paid = 3,
     PartiallyPaid = 4,
     Overdue = 5,
-    Cancelled = 6,
-    Refunded = 7
+    Cancelled = 6
 }
 
 public enum BillStatus
 {
     Draft = 1,
-    Received = 2,
-    Paid = 3,
-    PartiallyPaid = 4,
+    Pending = 2,
+    Received = 3,
+    Paid = 4,
     Overdue = 5,
     Cancelled = 6
-}
-
-public enum PaymentStatus
-{
-    Pending = 1,
-    Completed = 2,
-    Failed = 3,
-    Cancelled = 4,
-    Refunded = 5
 }
 
 public enum PaymentMethod
@@ -91,22 +82,19 @@ public enum PaymentMethod
     Other = 6
 }
 
-public enum TaxType
+public enum PaymentStatus
 {
-    SalesTax = 1,
-    VAT = 2,
-    GST = 3,
-    ServiceTax = 4,
-    Other = 5
+    Pending = 1,
+    Completed = 2,
+    Failed = 3,
+    Cancelled = 4
 }
 
-public enum DocumentType
+public enum TaxType
 {
-    Invoice = 1,
-    Bill = 2,
-    Payment = 3,
-    Receipt = 4,
-    JournalEntry = 5,
-    PurchaseOrder = 6,
-    Quotation = 7
+    Sales = 1,
+    Purchase = 2,
+    VAT = 3,
+    GST = 4,
+    Income = 5
 }

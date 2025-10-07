@@ -7,7 +7,7 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>Customer Management</h1>
     <button class="btn btn-primary" @onclick="ShowCreateModal">
-        <span class="oi oi-plus"></span> Add Customer
+        <i class="fas fa-plus"></i> Add Customer
     </button>
 </div>
 
@@ -61,15 +61,15 @@
                             </span>
                         </td>
                         <td>
-                            <div class="btn-group" role="group">
-                                <button class="btn btn-sm btn-outline-primary" @onclick="() => EditCustomer(customer)">
-                                    <span class="oi oi-pencil"></span>
+                            <div class="btn-group" role="group" aria-label="Customer actions">
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => EditCustomer(customer)" title="Edit Customer">
+                                    <i class="fas fa-edit"></i>
                                 </button>
-                                <button class="btn btn-sm btn-outline-success" @onclick="() => CreateInvoice(customer.Id)">
-                                    <span class="oi oi-document"></span>
+                                <button class="btn btn-sm btn-outline-success" @onclick="() => CreateInvoice(customer.Id)" title="Create Invoice">
+                                    <i class="fas fa-file-invoice-dollar"></i>
                                 </button>
-                                <button class="btn btn-sm btn-outline-info" @onclick="() => ViewStatement(customer.Id)">
-                                    <span class="oi oi-bar-chart"></span>
+                                <button class="btn btn-sm btn-outline-info" @onclick="() => ViewStatement(customer.Id)" title="View Statement">
+                                    <i class="fas fa-chart-line"></i>
                                 </button>
                             </div>
                         </td>

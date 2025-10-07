@@ -1,0 +1,3 @@
+{
+  "recommendations": ["ms-dotnettools.csharp", "ms-dotnettools.blazorwasm-companion", "formulahendry.auto-rename-tag", "bradlc.vscode-tailwindcss", "ms-vscode.powershell", "ms-vscode.vscode-json", "esbenp.prettier-vscode", "christian-kohler.path-intellisense", "visualstudioexptteam.vscodeintellicode", "ms-vscode.hexeditor", "github.vscode-pull-request-github"]
+}

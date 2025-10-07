@@ -1,0 +1,48 @@
+{
+  "dotnet.defaultSolution": "AccountingPro.sln",
+  "omnisharp.enableEditorConfigSupport": true,
+  "omnisharp.enableRoslynAnalyzers": true,
+  "files.exclude": {
+    "**/bin": true,
+    "**/obj": true,
+    "**/.vs": true
+  },
+  "search.exclude": {
+    "**/bin": true,
+    "**/obj": true,
+    "**/.vs": true,
+    "**/node_modules": true
+  },
+  "files.watcherExclude": {
+    "**/bin/**": true,
+    "**/obj/**": true,
+    "**/.vs/**": true
+  },
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": true,
+  "editor.formatOnType": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "explicit",
+    "source.organizeImports": "explicit"
+  },
+  "html.format.enable": true,
+  "css.format.enable": true,
+  "razor.format.enable": true,
+  "emmet.includeLanguages": {
+    "razor": "html"
+  },
+  "files.associations": {
+    "*.razor": "razor",
+    "*.cshtml": "razor"
+  },
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+  "terminal.integrated.cwd": "${workspaceFolder}",
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.expand": false,
+  "explorer.fileNesting.patterns": {
+    "*.cs": "$(capture).*.cs",
+    "*.csproj": "$(capture).*.csproj",
+    "*.razor": "$(capture).*.razor.cs, $(capture).*.razor.css"
+  },
+  "dotnet.completion.showCompletionItemsFromUnimportedNamespaces": true
+}

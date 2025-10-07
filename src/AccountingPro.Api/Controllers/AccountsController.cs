@@ -1,7 +1,7 @@
-using Microsoft.AspNetCore.Mvc;
-using MediatR;
-using AccountingPro.Application.Queries;
 using AccountingPro.Application.DTOs;
+using AccountingPro.Application.Queries;
+using MediatR;
+using Microsoft.AspNetCore.Mvc;
 
 namespace AccountingPro.Api.Controllers;
 

@@ -1,5 +1,5 @@
-using MediatR;
 using AccountingPro.Application.DTOs;
+using MediatR;
 
 namespace AccountingPro.Application.Queries;
 

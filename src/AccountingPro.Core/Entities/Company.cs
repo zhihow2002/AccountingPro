@@ -15,5 +15,6 @@ public class Company : BaseEntity
     // Navigation properties
     public virtual ICollection<Account> Accounts { get; set; } = new List<Account>();
     public virtual ICollection<FiscalYear> FiscalYears { get; set; } = new List<FiscalYear>();
-    public virtual ICollection<JournalEntry> JournalEntries { get; set; } = new List<JournalEntry>();
+    public virtual ICollection<JournalEntry> JournalEntries { get; set; } =
+        new List<JournalEntry>();
 }
