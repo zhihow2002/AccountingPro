@@ -31,15 +31,15 @@ window.printUtils = {
         `);
     printWindow.document.close();
     printWindow.focus();
-    
+
     // Add a small delay to ensure content is loaded
     setTimeout(() => {
       printWindow.print();
       printWindow.close();
     }, 500);
   },
-  
-  testFunction: function() {
+
+  testFunction: function () {
     alert("JavaScript is working!");
-  }
+  },
 };

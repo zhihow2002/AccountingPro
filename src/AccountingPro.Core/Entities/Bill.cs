@@ -18,8 +18,10 @@ public class Bill : BaseEntity
     public BillStatus Status { get; set; }
     public string Notes { get; set; } = string.Empty;
     public string Reference { get; set; } = string.Empty;
+    public int CompanyId { get; set; }
     
     // Navigation properties
+    public virtual Company Company { get; set; } = null!;
     public virtual Supplier Supplier { get; set; } = null!;
     public virtual ICollection<BillItem> BillItems { get; set; } = new List<BillItem>();
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();

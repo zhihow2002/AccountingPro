@@ -1,0 +1,216 @@
+@page "/companies"
+@using AccountingPro.Application.Services
+@using AccountingPro.Core.Entities
+@inject ICompanyService CompanyService
+@inject NavigationManager Navigation
+
+<PageTitle>Company Management</PageTitle>
+
+<h1>Company Management</h1>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5>Companies</h5>
+            </div>
+            <div class="card-body">
+                @if (Companies.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Name</th>
+                                    <th>Tax ID</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var company in Companies)
+                                {
+                                    <tr>
+                                        <td>@company.Code</td>
+                                        <td>@company.Name</td>
+                                        <td>@company.TaxId</td>
+                                        <td>
+                                            <span class="badge @(company.IsActive ? "badge-success" : "badge-secondary")">
+                                                @(company.IsActive ? "Active" : "Inactive")
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => EditCompany(company.Id)">
+                                                Edit
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteCompany(company.Id)">
+                                                Delete
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted">No companies found.</p>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>@(IsEditing ? "Edit Company" : "Add New Company")</h5>
+            </div>
+            <div class="card-body">
+                <EditForm Model="@CompanyModel" OnValidSubmit="@HandleValidSubmit">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    @if (!string.IsNullOrEmpty(ErrorMessage))
+                    {
+                        <div class="alert alert-danger">
+                            @ErrorMessage
+                        </div>
+                    }
+
+                    <div class="form-group">
+                        <label for="code">Company Code *</label>
+                        <InputText id="code" @bind-Value="CompanyModel.Code" class="form-control" placeholder="e.g., ABC001" />
+                        <ValidationMessage For="@(() => CompanyModel.Code)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="name">Company Name *</label>
+                        <InputText id="name" @bind-Value="CompanyModel.Name" class="form-control" placeholder="Company Name" />
+                        <ValidationMessage For="@(() => CompanyModel.Name)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="address">Address</label>
+                        <InputTextArea id="address" @bind-Value="CompanyModel.Address" class="form-control" rows="3" placeholder="Company Address" />
+                        <ValidationMessage For="@(() => CompanyModel.Address)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="taxId">Tax ID</label>
+                        <InputText id="taxId" @bind-Value="CompanyModel.TaxId" class="form-control" placeholder="Tax Identification Number" />
+                        <ValidationMessage For="@(() => CompanyModel.TaxId)" />
+                    </div>
+
+                    <div class="form-group">
+                        <div class="form-check">
+                            <InputCheckbox id="isActive" @bind-Value="CompanyModel.IsActive" class="form-check-input" />
+                            <label for="isActive" class="form-check-label">Active</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary" disabled="@IsSubmitting">
+                            @(IsSubmitting ? "Saving..." : (IsEditing ? "Update Company" : "Add Company"))
+                        </button>
+                        @if (IsEditing)
+                        {
+                            <button type="button" class="btn btn-secondary ml-2" @onclick="CancelEdit">Cancel</button>
+                        }
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Company> Companies = new();
+    private Company CompanyModel = new();
+    private bool IsEditing = false;
+    private bool IsSubmitting = false;
+    private string ErrorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCompanies();
+    }
+
+    private async Task LoadCompanies()
+    {
+        Companies = await CompanyService.GetAllCompaniesAsync();
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        IsSubmitting = true;
+        ErrorMessage = string.Empty;
+
+        try
+        {
+            if (IsEditing)
+            {
+                await CompanyService.UpdateCompanyAsync(CompanyModel);
+            }
+            else
+            {
+                await CompanyService.CreateCompanyAsync(CompanyModel);
+            }
+
+            await LoadCompanies();
+            ResetForm();
+        }
+        catch (InvalidOperationException ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = "An error occurred while saving the company. Please try again.";
+        }
+        finally
+        {
+            IsSubmitting = false;
+        }
+    }
+
+    private void EditCompany(int companyId)
+    {
+        var company = Companies.FirstOrDefault(c => c.Id == companyId);
+        if (company != null)
+        {
+            CompanyModel = new Company
+            {
+                Id = company.Id,
+                Code = company.Code,
+                Name = company.Name,
+                Address = company.Address,
+                TaxId = company.TaxId,
+                IsActive = company.IsActive
+            };
+            IsEditing = true;
+        }
+    }
+
+    private async Task DeleteCompany(int companyId)
+    {
+        if (await CompanyService.CompanyExistsAsync(companyId))
+        {
+            await CompanyService.DeleteCompanyAsync(companyId);
+            await LoadCompanies();
+        }
+    }
+
+    private void CancelEdit()
+    {
+        ResetForm();
+    }
+
+    private void ResetForm()
+    {
+        CompanyModel = new Company();
+        IsEditing = false;
+        ErrorMessage = string.Empty;
+    }
+}

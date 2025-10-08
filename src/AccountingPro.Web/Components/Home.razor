@@ -1,6 +1,7 @@
 @page "/"
 @page "/home"
 @inject NavigationManager Navigation
+@inject AccountingPro.Application.Services.IDashboardService DashboardService
 
 <PageTitle>Dashboard - AccountingPro</PageTitle>
 
@@ -49,11 +50,11 @@
                             <i class="fas fa-dollar-sign"></i>
                         </div>
                         <div class="metric-trend">
-                            <span class="trend-up">+12%</span>
+                            <span class="trend-up">@(metrics?.TotalInvoicesCount ?? 0) invoices</span>
                         </div>
                     </div>
                     <div class="metric-body">
-                        <h3 class="metric-value">$25,430</h3>
+                        <h3 class="metric-value">@(metrics?.TotalRevenue.ToString("C") ?? "$0.00")</h3>
                         <p class="metric-label">Total Revenue</p>
                         <small class="metric-detail">This month</small>
                     </div>
@@ -72,11 +73,11 @@
                             <i class="fas fa-credit-card"></i>
                         </div>
                         <div class="metric-trend">
-                            <span class="trend-down">+5%</span>
+                            <span class="trend-down">@(metrics?.TotalCustomersCount ?? 0) customers</span>
                         </div>
                     </div>
                     <div class="metric-body">
-                        <h3 class="metric-value">$8,750</h3>
+                        <h3 class="metric-value">@(metrics?.TotalExpenses.ToString("C") ?? "$0.00")</h3>
                         <p class="metric-label">Total Expenses</p>
                         <small class="metric-detail">This month</small>
                     </div>
@@ -95,13 +96,13 @@
                             <i class="fas fa-file-invoice"></i>
                         </div>
                         <div class="metric-trend">
-                            <span class="trend-warning">42</span>
+                            <span class="trend-warning">@(metrics?.PendingInvoicesCount ?? 0)</span>
                         </div>
                     </div>
                     <div class="metric-body">
-                        <h3 class="metric-value">$12,340</h3>
+                        <h3 class="metric-value">@(metrics?.OutstandingInvoices.ToString("C") ?? "$0.00")</h3>
                         <p class="metric-label">Outstanding</p>
-                        <small class="metric-detail">42 pending invoices</small>
+                        <small class="metric-detail">@(metrics?.PendingInvoicesCount ?? 0) pending invoices</small>
                     </div>
                     <div class="metric-footer">
                         <button class="btn btn-sm btn-outline-light" @onclick="NavigateToInvoices">
@@ -118,11 +119,11 @@
                             <i class="fas fa-chart-line"></i>
                         </div>
                         <div class="metric-trend">
-                            <span class="trend-up">+18%</span>
+                            <span class="trend-up">@(metrics?.TotalProductsCount ?? 0) products</span>
                         </div>
                     </div>
                     <div class="metric-body">
-                        <h3 class="metric-value">$16,680</h3>
+                        <h3 class="metric-value">@(metrics?.NetProfit.ToString("C") ?? "$0.00")</h3>
                         <p class="metric-label">Net Profit</p>
                         <small class="metric-detail">This month</small>
                     </div>
@@ -317,6 +318,13 @@
 </div>
 
 @code {
+    private AccountingPro.Application.Services.DashboardMetricsDto? metrics;
+
+    protected override async Task OnInitializedAsync()
+    {
+        metrics = await DashboardService.GetDashboardMetricsAsync();
+    }
+
     private void NavigateToInvoices() => Navigation.NavigateTo("/invoices");
     private void NavigateToCustomers() => Navigation.NavigateTo("/customers");
     private void NavigateToReports() => Navigation.NavigateTo("/reports");

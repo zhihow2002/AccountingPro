@@ -15,8 +15,10 @@ public class Supplier : BaseEntity
     public string Country { get; set; } = string.Empty;
     public string TaxNumber { get; set; } = string.Empty;
     public SupplierStatus Status { get; set; }
+    public int CompanyId { get; set; }
     
     // Navigation properties
+    public virtual Company Company { get; set; } = null!;
     public virtual ICollection<Bill> Bills { get; set; } = new List<Bill>();
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
 }

@@ -4,6 +4,7 @@
 @using AccountingPro.Application.Services
 @inject IInvoiceService InvoiceService
 @inject IProductService ProductService
+@inject ICustomerService CustomerService
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 
@@ -513,6 +514,7 @@
                                         <th>Description</th>
                                         <th>Qty</th>
                                         <th>Unit Price</th>
+                                        <th>Tax Rate (%)</th>
                                         <th>Total</th>
                                         <th></th>
                                     </tr>
@@ -541,7 +543,10 @@
                                                 <input type="number" @bind="createInvoiceForm.Items[index].UnitPrice" @oninput="e => UpdateItemPrice(index, e)" class="form-control form-control-sm" step="0.01" min="0" />
                                             </td>
                                             <td>
-                                                <span class="fw-bold">@((createInvoiceForm.Items[index].Quantity * createInvoiceForm.Items[index].UnitPrice).ToString("C"))</span>
+                                                <input type="number" @bind="createInvoiceForm.Items[index].TaxRate" @oninput="e => UpdateItemTaxRate(index, e)" class="form-control form-control-sm" step="0.01" min="0" max="100" />
+                                            </td>
+                                            <td>
+                                                <span class="fw-bold">@(GetItemTotal(createInvoiceForm.Items[index]).ToString("C"))</span>
                                             </td>
                                             <td>
                                                 <button type="button" class="btn btn-sm btn-danger" @onclick="() => RemoveInvoiceItem(index)">×</button>
@@ -623,16 +628,7 @@
         try
         {
             // Load customers from service
-            var customerService = await InvoiceService.GetAllInvoicesAsync();
-            customers = customerService
-                .GroupBy(i => i.CustomerId)
-                .Select(g => new CustomerDto 
-                { 
-                    Id = g.Key, 
-                    Name = g.First().CustomerName,
-                    CompanyName = g.First().CustomerName
-                })
-                .ToList();
+            customers = await CustomerService.GetAllCustomersAsync();
 
             // Load products from service
             products = await ProductService.GetAllProductsAsync();
@@ -683,7 +679,12 @@
 
     private void CreateNewInvoice()
     {
-        Navigation.NavigateTo("/invoices/create");
+        createInvoiceForm = new CreateInvoiceDto
+        {
+            InvoiceDate = DateTime.Now,
+            Items = new List<CreateInvoiceItemDto> { new CreateInvoiceItemDto { Quantity = 1, UnitPrice = 0, TaxRate = 0 } }
+        };
+        showCreateModal = true;
     }
 
     private void CloseCreateModal()
@@ -694,45 +695,21 @@
 
     private async Task SaveInvoice()
     {
-        // Generate a new invoice number
-        var newInvoiceNumber = $"INV-{DateTime.Now.Year}-{(invoices.Count + 1):D3}";
-        
-        var customer = customers.FirstOrDefault(c => c.Id == createInvoiceForm.CustomerId);
-        var subTotal = createInvoiceForm.Items.Sum(item => item.Quantity * item.UnitPrice);
-        var taxAmount = subTotal * 0.08m; // 8% tax
-        var totalAmount = subTotal + taxAmount;
-
-        var newInvoice = new InvoiceDto
+        try
         {
-            Id = invoices.Count + 1,
-            InvoiceNumber = newInvoiceNumber,
-            CustomerId = createInvoiceForm.CustomerId,
-            CustomerName = customer?.Name ?? "Unknown Customer",
-            InvoiceDate = createInvoiceForm.InvoiceDate,
-            DueDate = createInvoiceForm.InvoiceDate.AddDays(30), // Default due date 30 days from invoice date
-            SubTotal = subTotal,
-            TaxAmount = taxAmount,
-            TotalAmount = totalAmount,
-            PaidAmount = 0,
-            BalanceAmount = totalAmount,
-            Description = createInvoiceForm.Description,
-            Notes = createInvoiceForm.Notes,
-            Status = InvoiceStatus.Draft,
-            Items = createInvoiceForm.Items.Select(item => new InvoiceItemDto
-            {
-                ProductId = item.ProductId,
-                ProductName = products.FirstOrDefault(p => p.Id == item.ProductId)?.Name ?? "Custom Item",
-                Description = item.Description,
-                Quantity = item.Quantity,
-                UnitPrice = item.UnitPrice,
-                TotalPrice = item.Quantity * item.UnitPrice,
-                LineTotal = item.Quantity * item.UnitPrice
-            }).ToList()
-        };
-
-        invoices.Add(newInvoice);
-        FilterInvoices();
-        CloseCreateModal();
+            // Call the backend service to create the invoice
+            var createdInvoice = await InvoiceService.CreateInvoiceAsync(createInvoiceForm);
+            
+            // Reload invoices to show the new one
+            await LoadInvoices();
+            
+            CloseCreateModal();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating invoice: {ex.Message}");
+            // You could add error handling UI here
+        }
     }
 
     private Dictionary<int, string> GetCustomerOptions()
@@ -747,7 +724,7 @@
 
     private void AddInvoiceItem()
     {
-        createInvoiceForm.Items.Add(new CreateInvoiceItemDto { Quantity = 1, UnitPrice = 0 });
+        createInvoiceForm.Items.Add(new CreateInvoiceItemDto { Quantity = 1, UnitPrice = 0, TaxRate = 0 });
     }
 
     private void RemoveInvoiceItem(int index)
@@ -776,6 +753,15 @@
         StateHasChanged();
     }
 
+    private void UpdateItemTaxRate(int index, ChangeEventArgs e)
+    {
+        if (decimal.TryParse(e.Value?.ToString(), out decimal taxRate))
+        {
+            createInvoiceForm.Items[index].TaxRate = Math.Max(0, Math.Min(100, taxRate));
+        }
+        StateHasChanged();
+    }
+
     private void UpdateProductSelection(int index, ChangeEventArgs e)
     {
         if (int.TryParse(e.Value?.ToString(), out int productId) && productId > 0)
@@ -785,6 +771,7 @@
             {
                 createInvoiceForm.Items[index].Description = product.Name;
                 createInvoiceForm.Items[index].UnitPrice = product.SalesPrice > 0 ? product.SalesPrice : product.UnitPrice;
+                createInvoiceForm.Items[index].TaxRate = product.TaxRate;
             }
         }
         else
@@ -792,6 +779,7 @@
             // Clear fields if no product selected
             createInvoiceForm.Items[index].Description = string.Empty;
             createInvoiceForm.Items[index].UnitPrice = 0;
+            createInvoiceForm.Items[index].TaxRate = 0;
         }
         StateHasChanged();
     }
@@ -816,11 +804,16 @@
         StateHasChanged();
     }
 
+    private decimal GetItemTotal(CreateInvoiceItemDto item)
+    {
+        var subTotal = item.Quantity * item.UnitPrice;
+        var taxAmount = subTotal * (item.TaxRate / 100);
+        return subTotal + taxAmount;
+    }
+
     private decimal GetInvoiceTotal()
     {
-        var subTotal = createInvoiceForm.Items.Sum(item => item.Quantity * item.UnitPrice);
-        var taxAmount = subTotal * 0.08m; // 8% tax
-        return subTotal + taxAmount;
+        return createInvoiceForm.Items.Sum(item => GetItemTotal(item));
     }
 
     private void AddEditInvoiceItem()
@@ -1010,12 +1003,12 @@
             Console.WriteLine($"Generated HTML length: {invoiceHtml.Length}");
             
             // Check if JavaScript function exists
-            var jsExists = await JSRuntime.InvokeAsync<bool>("eval", "typeof window.printUtils !== 'undefined' && typeof window.printUtils.printInvoice === 'function'");
+            var jsExists = await JSRuntime.InvokeAsync<bool>("eval", new object[] { "typeof window.printUtils !== 'undefined' && typeof window.printUtils.printInvoice === 'function'" });
             Console.WriteLine($"JavaScript function exists: {jsExists}");
             
             if (jsExists)
             {
-                await JSRuntime.InvokeVoidAsync("printUtils.printInvoice", invoiceHtml);
+                await JSRuntime.InvokeAsync<object>("printUtils.printInvoice", new object[] { invoiceHtml });
                 Console.WriteLine("JavaScript function called successfully");
             }
             else
@@ -1035,12 +1028,12 @@
         try
         {
             Console.WriteLine("Testing JavaScript...");
-            var jsExists = await JSRuntime.InvokeAsync<bool>("eval", "typeof window.printUtils !== 'undefined'");
+            var jsExists = await JSRuntime.InvokeAsync<bool>("eval", new object[] { "typeof window.printUtils !== 'undefined'" });
             Console.WriteLine($"printUtils exists: {jsExists}");
             
             if (jsExists)
             {
-                await JSRuntime.InvokeVoidAsync("printUtils.testFunction");
+                await JSRuntime.InvokeAsync<object>("printUtils.testFunction", Array.Empty<object>());
             }
             else
             {

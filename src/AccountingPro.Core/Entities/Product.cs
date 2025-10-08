@@ -14,8 +14,10 @@ public class Product : BaseEntity
     public bool IsActive { get; set; } = true;
     public int? IncomeAccountId { get; set; }
     public int? ExpenseAccountId { get; set; }
+    public int CompanyId { get; set; }
     
     // Navigation properties
+    public virtual Company Company { get; set; } = null!;
     public virtual Account? IncomeAccount { get; set; }
     public virtual Account? ExpenseAccount { get; set; }
     public virtual ICollection<InvoiceItem> InvoiceItems { get; set; } = new List<InvoiceItem>();

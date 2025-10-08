@@ -36,8 +36,24 @@ builder.Services.AddScoped<
     AccountingPro.Infrastructure.Services.InvoiceService
 >();
 builder.Services.AddScoped<
+    AccountingPro.Application.Services.IBillService,
+    AccountingPro.Infrastructure.Services.BillService
+>();
+builder.Services.AddScoped<
     AccountingPro.Application.Services.IProductService,
     AccountingPro.Infrastructure.Services.ProductService
+>();
+builder.Services.AddScoped<
+    AccountingPro.Application.Services.IDashboardService,
+    AccountingPro.Application.Services.DashboardService
+>();
+builder.Services.AddScoped<
+    AccountingPro.Application.Services.ICompanyContextService,
+    AccountingPro.Application.Services.CompanyContextService
+>();
+builder.Services.AddScoped<
+    AccountingPro.Application.Services.ICompanyService,
+    AccountingPro.Infrastructure.Services.CompanyService
 >();
 
 // Add HttpClient for API calls
@@ -71,12 +87,16 @@ app.MapFallbackToPage("/_Host");
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AccountingDbContext>();
+    var companyContext = scope.ServiceProvider.GetRequiredService<AccountingPro.Application.Services.ICompanyContextService>();
 
     // Apply any pending migrations
     await context.Database.MigrateAsync();
 
     // Seed initial data
     await DataSeeder.SeedDataAsync(context);
+
+    // Set default company context
+    await companyContext.SetCurrentCompanyAsync(1); // Default to Sample Company
 }
 
 await app.RunAsync();

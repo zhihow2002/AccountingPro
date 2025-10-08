@@ -18,8 +18,10 @@ public class Invoice : BaseEntity
     public InvoiceStatus Status { get; set; }
     public string Notes { get; set; } = string.Empty;
     public string Terms { get; set; } = string.Empty;
+    public int CompanyId { get; set; }
     
     // Navigation properties
+    public virtual Company Company { get; set; } = null!;
     public virtual Customer Customer { get; set; } = null!;
     public virtual ICollection<InvoiceItem> InvoiceItems { get; set; } = new List<InvoiceItem>();
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();

@@ -1,0 +1,76 @@
+@using AccountingPro.Application.Services
+@using AccountingPro.Core.Entities
+@inject ICompanyContextService CompanyContext
+@inject NavigationManager Navigation
+
+<div class="company-selector">
+    <div class="form-group">
+        <label for="companySelect">Current Company:</label>
+        <select id="companySelect" @bind-value="SelectedCompanyId" @bind-value:event="onchange" class="form-control">
+            <option value="">Select Company...</option>
+            @foreach (var company in Companies)
+            {
+                <option value="@company.Id">@company.Name (@company.Code)</option>
+            }
+        </select>
+    </div>
+    @if (CompanyContext.CurrentCompany != null)
+    {
+        <div class="company-info">
+            <small class="text-muted">
+                <strong>@CompanyContext.CurrentCompany.Name</strong><br>
+                @CompanyContext.CurrentCompany.Address<br>
+                Tax ID: @CompanyContext.CurrentCompany.TaxId
+            </small>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Company> Companies = new();
+    private int SelectedCompanyId 
+    { 
+        get => CompanyContext.CurrentCompanyId ?? 0;
+        set => _ = OnCompanyChangedAsync(value);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCompanies();
+    }
+
+    private async Task LoadCompanies()
+    {
+        Companies = await CompanyContext.GetUserCompaniesAsync();
+    }
+
+    private async Task OnCompanyChangedAsync(int companyId)
+    {
+        if (companyId > 0)
+        {
+            await CompanyContext.SetCurrentCompanyAsync(companyId);
+            // Refresh the page to reload data for the new company
+            Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+        }
+        else
+        {
+            await CompanyContext.ClearCurrentCompanyAsync();
+        }
+    }
+}
+
+<style>
+.company-selector {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    border: 1px solid #dee2e6;
+}
+
+.company-info {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #dee2e6;
+}
+</style>

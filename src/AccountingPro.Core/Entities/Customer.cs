@@ -17,8 +17,10 @@ public class Customer : BaseEntity
     public decimal CreditLimit { get; set; }
     public decimal OutstandingBalance { get; set; }
     public CustomerStatus Status { get; set; }
+    public int CompanyId { get; set; }
 
     // Navigation properties
+    public virtual Company Company { get; set; } = null!;
     public virtual ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
 }

@@ -9,4 +9,5 @@ public interface ICustomerService
     Task<CustomerDto> CreateCustomerAsync(CreateCustomerDto createCustomerDto);
     Task<CustomerDto?> UpdateCustomerAsync(int id, UpdateCustomerDto updateCustomerDto);
     Task<bool> DeleteCustomerAsync(int id);
+    Task<List<CustomerDto>> GetCustomersByCompanyIdAsync(int companyId);
 }

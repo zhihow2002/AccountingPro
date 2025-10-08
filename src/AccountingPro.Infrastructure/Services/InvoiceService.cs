@@ -11,18 +11,25 @@ public class InvoiceService : IInvoiceService
 {
     private readonly AccountingDbContext _context;
     private readonly IMapper _mapper;
+    private readonly ICompanyContextService _companyContext;
+    private const string NoCompanyContextError = "No company context set";
 
-    public InvoiceService(AccountingDbContext context, IMapper mapper)
+    public InvoiceService(AccountingDbContext context, IMapper mapper, ICompanyContextService companyContext)
     {
         _context = context;
         _mapper = mapper;
+        _companyContext = companyContext;
     }
 
     public async Task<List<InvoiceDto>> GetAllInvoicesAsync()
     {
+        if (_companyContext.CurrentCompanyId == null)
+            throw new InvalidOperationException(NoCompanyContextError);
+
         var invoices = await _context
             .Invoices.Include(i => i.Customer)
             .Include(i => i.InvoiceItems)
+            .Where(i => i.CompanyId == _companyContext.CurrentCompanyId)
             .OrderByDescending(i => i.InvoiceDate)
             .ToListAsync();
 
@@ -31,20 +38,27 @@ public class InvoiceService : IInvoiceService
 
     public async Task<InvoiceDto?> GetInvoiceByIdAsync(int id)
     {
+        if (_companyContext.CurrentCompanyId == null)
+            throw new InvalidOperationException(NoCompanyContextError);
+
         var invoice = await _context
             .Invoices.Include(i => i.Customer)
             .Include(i => i.InvoiceItems)
             .ThenInclude(ii => ii.Product)
-            .FirstOrDefaultAsync(i => i.Id == id);
+            .FirstOrDefaultAsync(i => i.Id == id && i.CompanyId == _companyContext.CurrentCompanyId);
 
         return invoice == null ? null : _mapper.Map<InvoiceDto>(invoice);
     }
 
     public async Task<InvoiceDto> CreateInvoiceAsync(CreateInvoiceDto createInvoiceDto)
     {
+        if (_companyContext.CurrentCompanyId == null)
+            throw new InvalidOperationException(NoCompanyContextError);
+
         // Generate invoice number
         var lastInvoice = await _context
-            .Invoices.OrderByDescending(i => i.Id)
+            .Invoices.Where(i => i.CompanyId == _companyContext.CurrentCompanyId)
+            .OrderByDescending(i => i.Id)
             .FirstOrDefaultAsync();
 
         var invoiceNumber = $"INV-{DateTime.Now:yyyyMM}-{(lastInvoice?.Id ?? 0) + 1:D4}";
@@ -53,6 +67,7 @@ public class InvoiceService : IInvoiceService
         {
             InvoiceNumber = invoiceNumber,
             CustomerId = createInvoiceDto.CustomerId,
+            CompanyId = _companyContext.CurrentCompanyId.Value,
             InvoiceDate = createInvoiceDto.InvoiceDate,
             DueDate = createInvoiceDto.InvoiceDate.AddDays(30), // Default due date 30 days from invoice date
             DiscountAmount = 0, // No discount by default
@@ -96,9 +111,12 @@ public class InvoiceService : IInvoiceService
 
     public async Task<InvoiceDto?> UpdateInvoiceAsync(int id, InvoiceDto updateInvoiceDto)
     {
+        if (_companyContext.CurrentCompanyId == null)
+            throw new InvalidOperationException(NoCompanyContextError);
+
         var invoice = await _context
             .Invoices.Include(i => i.InvoiceItems)
-            .FirstOrDefaultAsync(i => i.Id == id);
+            .FirstOrDefaultAsync(i => i.Id == id && i.CompanyId == _companyContext.CurrentCompanyId);
 
         if (invoice == null)
             return null;
@@ -119,7 +137,10 @@ public class InvoiceService : IInvoiceService
 
     public async Task<bool> DeleteInvoiceAsync(int id)
     {
-        var invoice = await _context.Invoices.FirstOrDefaultAsync(i => i.Id == id);
+        if (_companyContext.CurrentCompanyId == null)
+            throw new InvalidOperationException(NoCompanyContextError);
+
+        var invoice = await _context.Invoices.FirstOrDefaultAsync(i => i.Id == id && i.CompanyId == _companyContext.CurrentCompanyId);
 
         if (invoice == null)
             return false;
@@ -132,10 +153,25 @@ public class InvoiceService : IInvoiceService
 
     public async Task<List<InvoiceDto>> GetInvoicesByCustomerIdAsync(int customerId)
     {
+        if (_companyContext.CurrentCompanyId == null)
+            throw new InvalidOperationException(NoCompanyContextError);
+
         var invoices = await _context
             .Invoices.Include(i => i.Customer)
             .Include(i => i.InvoiceItems)
-            .Where(i => i.CustomerId == customerId)
+            .Where(i => i.CustomerId == customerId && i.CompanyId == _companyContext.CurrentCompanyId)
+            .OrderByDescending(i => i.InvoiceDate)
+            .ToListAsync();
+
+        return _mapper.Map<List<InvoiceDto>>(invoices);
+    }
+
+    public async Task<List<InvoiceDto>> GetInvoicesByCompanyIdAsync(int companyId)
+    {
+        var invoices = await _context
+            .Invoices.Include(i => i.Customer)
+            .Include(i => i.InvoiceItems)
+            .Where(i => i.CompanyId == companyId)
             .OrderByDescending(i => i.InvoiceDate)
             .ToListAsync();
 

@@ -12,6 +12,7 @@ public class Payment : BaseEntity
     public PaymentStatus Status { get; set; }
     public string Reference { get; set; } = string.Empty;
     public string Notes { get; set; } = string.Empty;
+    public int CompanyId { get; set; }
     
     // Foreign keys
     public int? CustomerId { get; set; }
@@ -21,6 +22,7 @@ public class Payment : BaseEntity
     public int? BankAccountId { get; set; }
     
     // Navigation properties
+    public virtual Company Company { get; set; } = null!;
     public virtual Customer? Customer { get; set; }
     public virtual Supplier? Supplier { get; set; }
     public virtual Invoice? Invoice { get; set; }
