@@ -5,15 +5,20 @@ namespace AccountingPro.Infrastructure.Data;
 
 public class AccountingDbContext : DbContext
 {
+    private const string SYSTEM_USER = "System";
+
     public AccountingDbContext(DbContextOptions<AccountingDbContext> options)
         : base(options) { }
 
-    public DbSet<Company> Companies { get; set; }
-    public DbSet<Account> Accounts { get; set; }
-    public DbSet<JournalEntry> JournalEntries { get; set; }
-    public DbSet<JournalEntryLine> JournalEntryLines { get; set; }
-    public DbSet<FiscalYear> FiscalYears { get; set; }
-    public DbSet<AccountingPeriod> AccountingPeriods { get; set; }
+    public DbSet<Company> Companies { get; set; } = null!;
+    public DbSet<Account> Accounts { get; set; } = null!;
+    public DbSet<JournalEntry> JournalEntries { get; set; } = null!;
+    public DbSet<JournalEntryLine> JournalEntryLines { get; set; } = null!;
+    public DbSet<FiscalYear> FiscalYears { get; set; } = null!;
+    public DbSet<AccountingPeriod> AccountingPeriods { get; set; } = null!;
+    public DbSet<Customer> Customers { get; set; } = null!;
+    public DbSet<Invoice> Invoices { get; set; } = null!;
+    public DbSet<Product> Products { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -130,6 +135,19 @@ public class AccountingDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
+        // Customer configuration
+        modelBuilder.Entity<Customer>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.CompanyName).HasMaxLength(200);
+            entity.Property(e => e.Email).HasMaxLength(100);
+            entity.Property(e => e.Phone).HasMaxLength(50);
+            entity.Property(e => e.Address).HasMaxLength(500);
+            entity.Property(e => e.CreditLimit).HasPrecision(18, 2);
+            entity.Property(e => e.OutstandingBalance).HasPrecision(18, 2);
+        });
+
         // Seed data for account types
         SeedData(modelBuilder);
     }
@@ -151,7 +169,7 @@ public class AccountingDbContext : DbContext
                     TaxId = "12-3456789",
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
-                    CreatedBy = "System"
+                    CreatedBy = SYSTEM_USER
                 }
             );
 
@@ -168,7 +186,7 @@ public class AccountingDbContext : DbContext
                 AccountType = Core.Enums.AccountType.Asset,
                 CompanyId = 1,
                 CreatedAt = DateTime.UtcNow,
-                CreatedBy = "System"
+                CreatedBy = SYSTEM_USER
             },
             new Account
             {
@@ -179,7 +197,7 @@ public class AccountingDbContext : DbContext
                 AccountType = Core.Enums.AccountType.Asset,
                 CompanyId = 1,
                 CreatedAt = DateTime.UtcNow,
-                CreatedBy = "System"
+                CreatedBy = SYSTEM_USER
             },
             new Account
             {
@@ -190,7 +208,7 @@ public class AccountingDbContext : DbContext
                 AccountType = Core.Enums.AccountType.Asset,
                 CompanyId = 1,
                 CreatedAt = DateTime.UtcNow,
-                CreatedBy = "System"
+                CreatedBy = SYSTEM_USER
             },
             // Liabilities
             new Account
@@ -202,7 +220,7 @@ public class AccountingDbContext : DbContext
                 AccountType = Core.Enums.AccountType.Liability,
                 CompanyId = 1,
                 CreatedAt = DateTime.UtcNow,
-                CreatedBy = "System"
+                CreatedBy = SYSTEM_USER
             },
             new Account
             {
@@ -213,7 +231,7 @@ public class AccountingDbContext : DbContext
                 AccountType = Core.Enums.AccountType.Liability,
                 CompanyId = 1,
                 CreatedAt = DateTime.UtcNow,
-                CreatedBy = "System"
+                CreatedBy = SYSTEM_USER
             },
             // Equity
             new Account
@@ -225,7 +243,7 @@ public class AccountingDbContext : DbContext
                 AccountType = Core.Enums.AccountType.Equity,
                 CompanyId = 1,
                 CreatedAt = DateTime.UtcNow,
-                CreatedBy = "System"
+                CreatedBy = SYSTEM_USER
             },
             // Revenue
             new Account
@@ -237,7 +255,7 @@ public class AccountingDbContext : DbContext
                 AccountType = Core.Enums.AccountType.Revenue,
                 CompanyId = 1,
                 CreatedAt = DateTime.UtcNow,
-                CreatedBy = "System"
+                CreatedBy = SYSTEM_USER
             },
             // Expenses
             new Account
@@ -249,7 +267,7 @@ public class AccountingDbContext : DbContext
                 AccountType = Core.Enums.AccountType.Expense,
                 CompanyId = 1,
                 CreatedAt = DateTime.UtcNow,
-                CreatedBy = "System"
+                CreatedBy = SYSTEM_USER
             },
             new Account
             {
@@ -260,7 +278,7 @@ public class AccountingDbContext : DbContext
                 AccountType = Core.Enums.AccountType.Expense,
                 CompanyId = 1,
                 CreatedAt = DateTime.UtcNow,
-                CreatedBy = "System"
+                CreatedBy = SYSTEM_USER
             },
             new Account
             {
@@ -271,7 +289,7 @@ public class AccountingDbContext : DbContext
                 AccountType = Core.Enums.AccountType.Expense,
                 CompanyId = 1,
                 CreatedAt = DateTime.UtcNow,
-                CreatedBy = "System"
+                CreatedBy = SYSTEM_USER
             }
         };
 
@@ -285,13 +303,13 @@ public class AccountingDbContext : DbContext
                 {
                     Id = 1,
                     Year = 2024,
-                    StartDate = new DateTime(2024, 1, 1),
-                    EndDate = new DateTime(2024, 12, 31),
+                    StartDate = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Unspecified),
+                    EndDate = new DateTime(2024, 12, 31, 23, 59, 59, DateTimeKind.Unspecified),
                     Status = Core.Enums.FiscalYearStatus.Open,
                     CompanyId = 1,
                     IsCurrent = true,
                     CreatedAt = DateTime.UtcNow,
-                    CreatedBy = "System"
+                    CreatedBy = SYSTEM_USER
                 }
             );
     }

@@ -1,6 +1,9 @@
 @page "/customers"
 @using AccountingPro.Application.DTOs
 @using AccountingPro.Core.Enums
+@using AccountingPro.Application.Services
+@inject ICustomerService CustomerService
+@inject NavigationManager Navigation
 
 <PageTitle>Customers - AccountingPro</PageTitle>
 
@@ -109,12 +112,18 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Email</label>
-                                    <InputText class="form-control" @bind-Value="customerForm.Email" />
+                                    <label class="form-label">Company Name</label>
+                                    <InputText class="form-control" @bind-Value="customerForm.CompanyName" />
                                 </div>
                             </div>
                         </div>
                         <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Email</label>
+                                    <InputText class="form-control" @bind-Value="customerForm.Email" />
+                                </div>
+                            </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">Phone</label>
@@ -198,49 +207,18 @@
 
     private async Task LoadCustomers()
     {
-        // This would normally call a service to get data from the API
-        // For now, using sample data
-        customers = new List<CustomerDto>
+        try
         {
-            new CustomerDto 
-            { 
-                Id = 1, 
-                Name = "Acme Corporation", 
-                Email = "billing@acme.com", 
-                Phone = "+1-555-0123", 
-                City = "New York",
-                CreditLimit = 50000,
-                OutstandingBalance = 15000,
-                Status = CustomerStatus.Active,
-                TotalInvoices = 45
-            },
-            new CustomerDto 
-            { 
-                Id = 2, 
-                Name = "Tech Solutions Inc", 
-                Email = "accounts@techsolutions.com", 
-                Phone = "+1-555-0456", 
-                City = "San Francisco",
-                CreditLimit = 75000,
-                OutstandingBalance = 0,
-                Status = CustomerStatus.Active,
-                TotalInvoices = 32
-            },
-            new CustomerDto 
-            { 
-                Id = 3, 
-                Name = "Global Enterprises", 
-                Email = "finance@global.com", 
-                Phone = "+1-555-0789", 
-                City = "Chicago",
-                CreditLimit = 100000,
-                OutstandingBalance = 25000,
-                Status = CustomerStatus.Active,
-                TotalInvoices = 67
-            }
-        };
-        
-        filteredCustomers = customers.ToList();
+            customers = await CustomerService.GetAllCustomersAsync();
+            filteredCustomers = customers.ToList();
+        }
+        catch (Exception ex)
+        {
+            // In a real app, this would use a proper logging framework
+            Console.WriteLine($"Error loading customers: {ex.Message}");
+            customers = new List<CustomerDto>();
+            filteredCustomers = new List<CustomerDto>();
+        }
     }
 
     private void FilterCustomers()
@@ -266,6 +244,7 @@
         customerForm = new CreateCustomerDto
         {
             Name = customer.Name,
+            CompanyName = customer.CompanyName,
             Email = customer.Email,
             Phone = customer.Phone,
             Address = customer.Address,
@@ -290,50 +269,50 @@
 
     private async Task SaveCustomer()
     {
-        // This would normally call a service to save to the API
-        if (isEditing)
+        try
         {
-            var existingCustomer = customers.First(c => c.Id == editingCustomerId);
-            existingCustomer.Name = customerForm.Name;
-            existingCustomer.Email = customerForm.Email;
-            existingCustomer.Phone = customerForm.Phone;
-            existingCustomer.Address = customerForm.Address;
-            existingCustomer.City = customerForm.City;
-            existingCustomer.State = customerForm.State;
-            existingCustomer.ZipCode = customerForm.ZipCode;
-            existingCustomer.Country = customerForm.Country;
-            existingCustomer.CreditLimit = customerForm.CreditLimit;
-            existingCustomer.Status = customerForm.Status;
-        }
-        else
-        {
-            var newCustomer = new CustomerDto
+            if (isEditing)
             {
-                Id = customers.Max(c => c.Id) + 1,
-                Name = customerForm.Name,
-                Email = customerForm.Email,
-                Phone = customerForm.Phone,
-                Address = customerForm.Address,
-                City = customerForm.City,
-                State = customerForm.State,
-                ZipCode = customerForm.ZipCode,
-                Country = customerForm.Country,
-                CreditLimit = customerForm.CreditLimit,
-                Status = customerForm.Status,
-                OutstandingBalance = 0,
-                TotalInvoices = 0
-            };
-            customers.Add(newCustomer);
+                var updateDto = new UpdateCustomerDto
+                {
+                    Name = customerForm.Name,
+                    CompanyName = customerForm.CompanyName,
+                    Email = customerForm.Email,
+                    Phone = customerForm.Phone,
+                    Address = customerForm.Address,
+                    City = customerForm.City,
+                    State = customerForm.State,
+                    ZipCode = customerForm.ZipCode,
+                    Country = customerForm.Country,
+                    CreditLimit = customerForm.CreditLimit,
+                    Status = customerForm.Status
+                };
+
+                var updatedCustomer = await CustomerService.UpdateCustomerAsync(editingCustomerId, updateDto);
+                if (updatedCustomer != null)
+                {
+                    await LoadCustomers(); // Reload the data from database
+                }
+            }
+            else
+            {
+                var newCustomer = await CustomerService.CreateCustomerAsync(customerForm);
+                await LoadCustomers(); // Reload the data from database
+            }
+            
+            CloseModal();
         }
-        
-        FilterCustomers();
-        CloseModal();
+        catch (Exception ex)
+        {
+            // In a real app, this would use a proper logging framework and show user-friendly error messages
+            Console.WriteLine($"Error saving customer: {ex.Message}");
+        }
     }
 
     private void CreateInvoice(int customerId)
     {
         // Navigate to invoice creation with customer pre-selected
-        // Navigation.NavigateTo($"/invoices/create?customerId={customerId}");
+        Navigation.NavigateTo($"/invoices/create?customerId={customerId}");
     }
 
     private void ViewStatement(int customerId)

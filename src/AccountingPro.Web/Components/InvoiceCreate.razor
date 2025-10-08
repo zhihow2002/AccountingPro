@@ -1,0 +1,250 @@
+@page "/invoices/create"
+@using AccountingPro.Application.DTOs
+@using AccountingPro.Core.Enums
+@using AccountingPro.Application.Services
+@inject IInvoiceService InvoiceService
+@inject ICustomerService CustomerService
+@inject NavigationManager Navigation
+
+<PageTitle>Create Invoice - AccountingPro</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Create New Invoice</h1>
+                <button class="btn btn-secondary" @onclick="NavigateToInvoices">
+                    <i class="fas fa-arrow-left"></i> Back to Invoices
+                </button>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <EditForm Model="invoiceForm" OnValidSubmit="SaveInvoice">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Customer *</label>
+                                    <select class="form-control" @bind="invoiceForm.CustomerId">
+                                        <option value="0">Select Customer</option>
+                                        @foreach (var customer in customers)
+                                        {
+                                            <option value="@customer.Id">@customer.Name - @customer.CompanyName</option>
+                                        }
+                                    </select>
+                                    <ValidationMessage For="() => invoiceForm.CustomerId" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Invoice Date *</label>
+                                    <InputDate class="form-control" @bind-Value="invoiceForm.InvoiceDate" />
+                                    <ValidationMessage For="() => invoiceForm.InvoiceDate" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Notes</label>
+                            <InputTextArea class="form-control" @bind-Value="invoiceForm.Notes" rows="2" />
+                        </div>
+
+                        <!-- Invoice Items Section -->
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5>Invoice Items</h5>
+                                <button type="button" class="btn btn-sm btn-outline-primary" @onclick="AddInvoiceItem">
+                                    <i class="fas fa-plus"></i> Add Item
+                                </button>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 35%">Description</th>
+                                            <th style="width: 15%">Quantity</th>
+                                            <th style="width: 15%">Unit Price</th>
+                                            <th style="width: 15%">Tax Rate (%)</th>
+                                            <th style="width: 15%">Line Total</th>
+                                            <th style="width: 5%">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (int i = 0; i < invoiceForm.Items.Count; i++)
+                                        {
+                                            var index = i; // Capture for lambda
+                                            var item = invoiceForm.Items[index];
+                                            <tr>
+                                                <td>
+                                                    <InputText class="form-control form-control-sm" @bind-Value="item.Description" />
+                                                </td>
+                                                <td>
+                                                    <InputNumber class="form-control form-control-sm" @bind-Value="item.Quantity" @onchange="() => CalculateLineTotal(index)" />
+                                                </td>
+                                                <td>
+                                                    <InputNumber class="form-control form-control-sm" @bind-Value="item.UnitPrice" @onchange="() => CalculateLineTotal(index)" />
+                                                </td>
+                                                <td>
+                                                    <InputNumber class="form-control form-control-sm" @bind-Value="item.TaxRate" @onchange="() => CalculateLineTotal(index)" />
+                                                </td>
+                                                <td>
+                                                    <span class="fw-bold">@GetLineTotal(item).ToString("C")</span>
+                                                </td>
+                                                <td>
+                                                    @if (invoiceForm.Items.Count > 1)
+                                                    {
+                                                        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => RemoveInvoiceItem(index)">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <td colspan="4" class="text-end fw-bold">Subtotal:</td>
+                                            <td class="fw-bold">@GetSubTotal().ToString("C")</td>
+                                            <td></td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="4" class="text-end fw-bold">Tax Amount:</td>
+                                            <td class="fw-bold">@GetTotalTax().ToString("C")</td>
+                                            <td></td>
+                                        </tr>
+                                        <tr class="table-success">
+                                            <td colspan="4" class="text-end fw-bold fs-5">Total Amount:</td>
+                                            <td class="fw-bold fs-5">@GetTotalAmount().ToString("C")</td>
+                                            <td></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary" @onclick="NavigateToInvoices">
+                                Cancel
+                            </button>
+                            <button type="submit" class="btn btn-primary" disabled="@(!IsFormValid())">
+                                <i class="fas fa-save"></i> Create Invoice
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public int CustomerId { get; set; }
+
+    private List<CustomerDto> customers = new();
+    private CreateInvoiceDto invoiceForm = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCustomers();
+        InitializeForm();
+    }
+
+    private async Task LoadCustomers()
+    {
+        try
+        {
+            customers = await CustomerService.GetAllCustomersAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading customers: {ex.Message}");
+            customers = new List<CustomerDto>();
+        }
+    }
+
+    private void InitializeForm()
+    {
+        invoiceForm = new CreateInvoiceDto
+        {
+            CustomerId = CustomerId,
+            InvoiceDate = DateTime.Today,
+            Items = new List<CreateInvoiceItemDto>
+            {
+                new CreateInvoiceItemDto { Quantity = 1, UnitPrice = 0, TaxRate = 0 }
+            }
+        };
+    }
+
+    private void AddInvoiceItem()
+    {
+        invoiceForm.Items.Add(new CreateInvoiceItemDto { Quantity = 1, UnitPrice = 0, TaxRate = 0 });
+    }
+
+    private void RemoveInvoiceItem(int index)
+    {
+        if (invoiceForm.Items.Count > 1)
+        {
+            invoiceForm.Items.RemoveAt(index);
+        }
+    }
+
+    private void CalculateLineTotal(int index)
+    {
+        // This method triggers recalculation when item values change
+        StateHasChanged();
+    }
+
+    private decimal GetLineTotal(CreateInvoiceItemDto item)
+    {
+        var subtotal = item.Quantity * item.UnitPrice;
+        var tax = subtotal * (item.TaxRate / 100);
+        return subtotal + tax;
+    }
+
+    private decimal GetSubTotal()
+    {
+        return invoiceForm.Items.Sum(item => item.Quantity * item.UnitPrice);
+    }
+
+    private decimal GetTotalTax()
+    {
+        return invoiceForm.Items.Sum(item => (item.Quantity * item.UnitPrice) * (item.TaxRate / 100));
+    }
+
+    private decimal GetTotalAmount()
+    {
+        return GetSubTotal() + GetTotalTax();
+    }
+
+    private bool IsFormValid()
+    {
+        return invoiceForm.CustomerId > 0 && 
+               invoiceForm.Items.Any() && 
+               invoiceForm.Items.All(item => !string.IsNullOrWhiteSpace(item.Description) && item.Quantity > 0 && item.UnitPrice >= 0);
+    }
+
+    private void NavigateToInvoices()
+    {
+        Navigation.NavigateTo("/invoices");
+    }
+
+    private async Task SaveInvoice()
+    {
+        try
+        {
+            await InvoiceService.CreateInvoiceAsync(invoiceForm);
+            Navigation.NavigateTo("/invoices");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating invoice: {ex.Message}");
+            // In a real app, show user-friendly error message
+        }
+    }
+}

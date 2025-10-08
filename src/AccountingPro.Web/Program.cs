@@ -26,12 +26,27 @@ builder.Services.AddMediatR(cfg =>
 // Add AutoMapper
 builder.Services.AddAutoMapper(typeof(AccountingPro.Application.DTOs.CompanyDto).Assembly);
 
+// Add Application Services
+builder.Services.AddScoped<
+    AccountingPro.Application.Services.ICustomerService,
+    AccountingPro.Infrastructure.Services.CustomerService
+>();
+builder.Services.AddScoped<
+    AccountingPro.Application.Services.IInvoiceService,
+    AccountingPro.Infrastructure.Services.InvoiceService
+>();
+builder.Services.AddScoped<
+    AccountingPro.Application.Services.IProductService,
+    AccountingPro.Infrastructure.Services.ProductService
+>();
+
 // Add HttpClient for API calls
 builder.Services.AddHttpClient(
     "AccountingApi",
     client =>
     {
-        client.BaseAddress = new Uri("https://localhost:7000/");
+        var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7000/";
+        client.BaseAddress = new Uri(apiBaseUrl);
     }
 );
 
@@ -56,10 +71,10 @@ app.MapFallbackToPage("/_Host");
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AccountingDbContext>();
-    
+
     // Apply any pending migrations
     await context.Database.MigrateAsync();
-    
+
     // Seed initial data
     await DataSeeder.SeedDataAsync(context);
 }

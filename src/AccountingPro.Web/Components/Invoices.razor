@@ -1,14 +1,24 @@
 @page "/invoices"
 @using AccountingPro.Application.DTOs
 @using AccountingPro.Core.Enums
+@using AccountingPro.Application.Services
+@inject IInvoiceService InvoiceService
+@inject IProductService ProductService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Invoices - AccountingPro</PageTitle>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>Invoice Management</h1>
-    <button class="btn btn-primary" @onclick="CreateNewInvoice">
-        <i class="fas fa-plus"></i> Create Invoice
-    </button>
+    <div>
+        <button class="btn btn-secondary me-2" @onclick="TestJavaScript">
+            <i class="fas fa-code"></i> Test JS
+        </button>
+        <button class="btn btn-primary" @onclick="CreateNewInvoice">
+            <i class="fas fa-plus"></i> Create Invoice
+        </button>
+    </div>
 </div>
 
 <!-- Invoice Statistics -->
@@ -238,6 +248,219 @@
     </div>
 }
 
+<!-- Invoice View Modal -->
+@if (showViewModal && viewInvoice != null)
+{
+    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Invoice Details - @viewInvoice.InvoiceNumber</h5>
+                    <button type="button" class="btn-close" @onclick="CloseViewModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6>Invoice Information</h6>
+                            <p><strong>Invoice Number:</strong> @viewInvoice.InvoiceNumber</p>
+                            <p><strong>Customer:</strong> @viewInvoice.CustomerName</p>
+                            <p><strong>Status:</strong> 
+                                <span class="badge badge-@GetStatusClass(viewInvoice.Status)">@viewInvoice.Status</span>
+                            </p>
+                            <p><strong>Invoice Date:</strong> @viewInvoice.InvoiceDate.ToString("MMMM dd, yyyy")</p>
+                            <p><strong>Due Date:</strong> @viewInvoice.DueDate.ToString("MMMM dd, yyyy")</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Financial Summary</h6>
+                            <p><strong>Subtotal:</strong> @viewInvoice.SubTotal.ToString("C")</p>
+                            <p><strong>Tax Amount:</strong> @viewInvoice.TaxAmount.ToString("C")</p>
+                            <p><strong>Discount:</strong> @viewInvoice.DiscountAmount.ToString("C")</p>
+                            <p><strong>Total Amount:</strong> @viewInvoice.TotalAmount.ToString("C")</p>
+                            <p><strong>Amount Paid:</strong> @viewInvoice.PaidAmount.ToString("C")</p>
+                            <p><strong>Balance Due:</strong> @viewInvoice.BalanceAmount.ToString("C")</p>
+                        </div>
+                    </div>
+                    
+                    @if (!string.IsNullOrEmpty(viewInvoice.Description))
+                    {
+                        <div class="mb-3">
+                            <h6>Description</h6>
+                            <p>@viewInvoice.Description</p>
+                        </div>
+                    }
+                    
+                    <h6>Invoice Items</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Product/Service</th>
+                                    <th>Description</th>
+                                    <th>Quantity</th>
+                                    <th>Unit Price</th>
+                                    <th>Tax Rate</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in viewInvoice.Items)
+                                {
+                                    <tr>
+                                        <td>@item.ProductName</td>
+                                        <td>@item.Description</td>
+                                        <td>@item.Quantity</td>
+                                        <td>@item.UnitPrice.ToString("C")</td>
+                                        <td>@item.TaxRate.ToString("P")</td>
+                                        <td>@item.TotalPrice.ToString("C")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    @if (!string.IsNullOrEmpty(viewInvoice.Notes))
+                    {
+                        <div class="mb-3">
+                            <h6>Notes</h6>
+                            <p>@viewInvoice.Notes</p>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseViewModal">Close</button>
+                    <button type="button" class="btn btn-primary" @onclick="() => PrintInvoice(viewInvoice.Id)">
+                        <i class="fas fa-print"></i> Print Invoice
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Invoice Edit Modal -->
+@if (showEditModal)
+{
+    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Invoice - @editForm.InvoiceNumber</h5>
+                    <button type="button" class="btn-close" @onclick="CloseEditModal"></button>
+                </div>
+                <EditForm Model="@editForm" OnValidSubmit="@SaveEditedInvoice">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Customer</label>
+                                    <select @bind="editForm.CustomerId" class="form-select" required>
+                                        <option value="0">Select Customer</option>
+                                        @foreach (var customer in GetCustomerOptions())
+                                        {
+                                            <option value="@customer.Key">@customer.Value</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Invoice Date</label>
+                                    <input type="date" @bind="editForm.InvoiceDate" class="form-control" required />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Description</label>
+                                    <input type="text" @bind="editForm.Description" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Status</label>
+                                    <select @bind="editForm.Status" class="form-select">
+                                        <option value="@InvoiceStatus.Draft">Draft</option>
+                                        <option value="@InvoiceStatus.Sent">Sent</option>
+                                        <option value="@InvoiceStatus.Cancelled">Cancelled</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Notes</label>
+                            <textarea @bind="editForm.Notes" class="form-control" rows="2"></textarea>
+                        </div>
+                        
+                        <!-- Invoice Items -->
+                        <h6>Invoice Items</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Product/Service</th>
+                                        <th>Description</th>
+                                        <th>Qty</th>
+                                        <th>Unit Price</th>
+                                        <th>Total</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (int i = 0; i < editForm.Items.Count; i++)
+                                    {
+                                        var index = i;
+                                        <tr>
+                                            <td>
+                                                <select @bind="editForm.Items[index].ProductId" @bind:event="oninput" @onchange="e => UpdateEditProductSelection(index, e)" class="form-select form-select-sm">
+                                                    <option value="0">Select Product</option>
+                                                    @foreach (var product in GetProductOptions())
+                                                    {
+                                                        <option value="@product.Key">@product.Value</option>
+                                                    }
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <input type="text" @bind="editForm.Items[index].Description" class="form-control form-control-sm" />
+                                            </td>
+                                            <td>
+                                                <input type="number" @bind="editForm.Items[index].Quantity" @oninput="e => UpdateEditItemQuantity(index, e)" class="form-control form-control-sm" min="1" />
+                                            </td>
+                                            <td>
+                                                <input type="number" @bind="editForm.Items[index].UnitPrice" @oninput="e => UpdateEditItemPrice(index, e)" class="form-control form-control-sm" step="0.01" min="0" />
+                                            </td>
+                                            <td>
+                                                <span class="fw-bold">@((editForm.Items[index].Quantity * editForm.Items[index].UnitPrice).ToString("C"))</span>
+                                            </td>
+                                            <td>
+                                                <button type="button" class="btn btn-sm btn-danger" @onclick="() => RemoveEditInvoiceItem(index)">×</button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-success" @onclick="AddEditInvoiceItem">+ Add Item</button>
+                        
+                        <div class="row mt-3">
+                            <div class="col-md-6 offset-md-6">
+                                <div class="d-flex justify-content-between">
+                                    <strong>Total: @GetEditInvoiceTotal().ToString("C")</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseEditModal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
 <!-- Invoice Creation Modal -->
 @if (showCreateModal)
 {
@@ -271,14 +494,6 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Due Date</label>
-                                    <input type="date" @bind="createInvoiceForm.DueDate" class="form-control" required />
-                                </div>
-                            </div>
-                        </div>
                         <div class="mb-3">
                             <label class="form-label">Description</label>
                             <input type="text" @bind="createInvoiceForm.Description" class="form-control" placeholder="Enter description" />
@@ -308,7 +523,7 @@
                                         var index = i;
                                         <tr>
                                             <td>
-                                                <select @bind="createInvoiceForm.Items[index].ProductId" class="form-select form-select-sm">
+                                                <select @bind="createInvoiceForm.Items[index].ProductId" @bind:event="oninput" @onchange="e => UpdateProductSelection(index, e)" class="form-select form-select-sm">
                                                     <option value="0">Select Product</option>
                                                     @foreach (var product in GetProductOptions())
                                                     {
@@ -374,6 +589,12 @@
     private List<CustomerDto> customers = new();
     private List<ProductDto> products = new();
 
+    // Invoice view/edit variables
+    private bool showViewModal = false;
+    private bool showEditModal = false;
+    private InvoiceDto? viewInvoice;
+    private EditInvoiceDto editForm = new();
+
     protected override async Task OnInitializedAsync()
     {
         await LoadInvoices();
@@ -381,72 +602,17 @@
 
     private async Task LoadInvoices()
     {
-        // Sample invoice data - would come from API
-        invoices = new List<InvoiceDto>
+        try
         {
-            new InvoiceDto
-            {
-                Id = 1,
-                InvoiceNumber = "INV-2024-001",
-                CustomerId = 1,
-                CustomerName = "Acme Corporation",
-                InvoiceDate = DateTime.Today.AddDays(-30),
-                DueDate = DateTime.Today,
-                SubTotal = 10000,
-                TaxAmount = 800,
-                TotalAmount = 10800,
-                PaidAmount = 5000,
-                BalanceAmount = 5800,
-                Status = InvoiceStatus.PartiallyPaid,
-                Notes = "Monthly service charges",
-                Items = new List<InvoiceItemDto>
-                {
-                    new InvoiceItemDto { Description = "Consulting Services", Quantity = 40, UnitPrice = 250, LineTotal = 10000 }
-                }
-            },
-            new InvoiceDto
-            {
-                Id = 2,
-                InvoiceNumber = "INV-2024-002",
-                CustomerId = 2,
-                CustomerName = "Tech Solutions Inc",
-                InvoiceDate = DateTime.Today.AddDays(-15),
-                DueDate = DateTime.Today.AddDays(15),
-                SubTotal = 15000,
-                TaxAmount = 1200,
-                TotalAmount = 16200,
-                PaidAmount = 16200,
-                BalanceAmount = 0,
-                Status = InvoiceStatus.Paid,
-                Notes = "Software development project",
-                Items = new List<InvoiceItemDto>
-                {
-                    new InvoiceItemDto { Description = "Software Development", Quantity = 60, UnitPrice = 250, LineTotal = 15000 }
-                }
-            },
-            new InvoiceDto
-            {
-                Id = 3,
-                InvoiceNumber = "INV-2024-003",
-                CustomerId = 3,
-                CustomerName = "Global Enterprises",
-                InvoiceDate = DateTime.Today.AddDays(-5),
-                DueDate = DateTime.Today.AddDays(25),
-                SubTotal = 25000,
-                TaxAmount = 2000,
-                TotalAmount = 27000,
-                PaidAmount = 0,
-                BalanceAmount = 27000,
-                Status = InvoiceStatus.Sent,
-                Notes = "Q4 consulting services",
-                Items = new List<InvoiceItemDto>
-                {
-                    new InvoiceItemDto { Description = "Strategic Consulting", Quantity = 100, UnitPrice = 250, LineTotal = 25000 }
-                }
-            }
-        };
-        
-        filteredInvoices = invoices.ToList();
+            invoices = await InvoiceService.GetAllInvoicesAsync();
+            filteredInvoices = invoices.ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading invoices: {ex.Message}");
+            invoices = new List<InvoiceDto>();
+            filteredInvoices = new List<InvoiceDto>();
+        }
         
         // Load sample customers and products for creating invoices
         await LoadCustomersAndProducts();
@@ -454,24 +620,45 @@
 
     private async Task LoadCustomersAndProducts()
     {
-        // Sample customers data
-        customers = new List<CustomerDto>
+        try
         {
-            new CustomerDto { Id = 1, Name = "Acme Corporation", CompanyName = "Acme Corporation" },
-            new CustomerDto { Id = 2, Name = "Global Industries", CompanyName = "Global Industries" },
-            new CustomerDto { Id = 3, Name = "Tech Solutions", CompanyName = "Tech Solutions" },
-            new CustomerDto { Id = 4, Name = "City Services", CompanyName = "City Services" }
-        };
+            // Load customers from service
+            var customerService = await InvoiceService.GetAllInvoicesAsync();
+            customers = customerService
+                .GroupBy(i => i.CustomerId)
+                .Select(g => new CustomerDto 
+                { 
+                    Id = g.Key, 
+                    Name = g.First().CustomerName,
+                    CompanyName = g.First().CustomerName
+                })
+                .ToList();
 
-        // Sample products data
-        products = new List<ProductDto>
+            // Load products from service
+            products = await ProductService.GetAllProductsAsync();
+        }
+        catch (Exception ex)
         {
-            new ProductDto { Id = 1, Name = "Consulting Services", UnitPrice = 150.00m },
-            new ProductDto { Id = 2, Name = "Software License", UnitPrice = 500.00m },
-            new ProductDto { Id = 3, Name = "Training Program", UnitPrice = 250.00m },
-            new ProductDto { Id = 4, Name = "Support Services", UnitPrice = 100.00m },
-            new ProductDto { Id = 5, Name = "Custom Development", UnitPrice = 200.00m }
-        };
+            Console.WriteLine($"Error loading customers and products: {ex.Message}");
+            
+            // Fallback to sample data if services fail
+            customers = new List<CustomerDto>
+            {
+                new CustomerDto { Id = 1, Name = "Acme Corporation", CompanyName = "Acme Corporation" },
+                new CustomerDto { Id = 2, Name = "Global Industries", CompanyName = "Global Industries" },
+                new CustomerDto { Id = 3, Name = "Tech Solutions", CompanyName = "Tech Solutions" },
+                new CustomerDto { Id = 4, Name = "City Services", CompanyName = "City Services" }
+            };
+
+            products = new List<ProductDto>
+            {
+                new ProductDto { Id = 1, Name = "Consulting Services", UnitPrice = 150.00m },
+                new ProductDto { Id = 2, Name = "Software License", UnitPrice = 500.00m },
+                new ProductDto { Id = 3, Name = "Training Program", UnitPrice = 250.00m },
+                new ProductDto { Id = 4, Name = "Support Services", UnitPrice = 100.00m },
+                new ProductDto { Id = 5, Name = "Custom Development", UnitPrice = 200.00m }
+            };
+        }
     }
 
     private void FilterInvoices()
@@ -496,16 +683,7 @@
 
     private void CreateNewInvoice()
     {
-        createInvoiceForm = new CreateInvoiceDto
-        {
-            InvoiceDate = DateTime.Today,
-            DueDate = DateTime.Today.AddDays(30),
-            Items = new List<CreateInvoiceItemDto> 
-            { 
-                new CreateInvoiceItemDto { Quantity = 1, UnitPrice = 0 } 
-            }
-        };
-        showCreateModal = true;
+        Navigation.NavigateTo("/invoices/create");
     }
 
     private void CloseCreateModal()
@@ -531,7 +709,7 @@
             CustomerId = createInvoiceForm.CustomerId,
             CustomerName = customer?.Name ?? "Unknown Customer",
             InvoiceDate = createInvoiceForm.InvoiceDate,
-            DueDate = createInvoiceForm.DueDate,
+            DueDate = createInvoiceForm.InvoiceDate.AddDays(30), // Default due date 30 days from invoice date
             SubTotal = subTotal,
             TaxAmount = taxAmount,
             TotalAmount = totalAmount,
@@ -564,7 +742,7 @@
 
     private Dictionary<int, string> GetProductOptions()
     {
-        return products.ToDictionary(p => p.Id, p => $"{p.Name} - {p.UnitPrice:C}");
+        return products.ToDictionary(p => p.Id, p => $"{p.Name} - {p.SalesPrice:C}");
     }
 
     private void AddInvoiceItem()
@@ -598,6 +776,46 @@
         StateHasChanged();
     }
 
+    private void UpdateProductSelection(int index, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int productId) && productId > 0)
+        {
+            var product = products.FirstOrDefault(p => p.Id == productId);
+            if (product != null)
+            {
+                createInvoiceForm.Items[index].Description = product.Name;
+                createInvoiceForm.Items[index].UnitPrice = product.SalesPrice > 0 ? product.SalesPrice : product.UnitPrice;
+            }
+        }
+        else
+        {
+            // Clear fields if no product selected
+            createInvoiceForm.Items[index].Description = string.Empty;
+            createInvoiceForm.Items[index].UnitPrice = 0;
+        }
+        StateHasChanged();
+    }
+
+    private void UpdateEditProductSelection(int index, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int productId) && productId > 0)
+        {
+            var product = products.FirstOrDefault(p => p.Id == productId);
+            if (product != null)
+            {
+                editForm.Items[index].Description = product.Name;
+                editForm.Items[index].UnitPrice = product.SalesPrice > 0 ? product.SalesPrice : product.UnitPrice;
+            }
+        }
+        else
+        {
+            // Clear fields if no product selected
+            editForm.Items[index].Description = string.Empty;
+            editForm.Items[index].UnitPrice = 0;
+        }
+        StateHasChanged();
+    }
+
     private decimal GetInvoiceTotal()
     {
         var subTotal = createInvoiceForm.Items.Sum(item => item.Quantity * item.UnitPrice);
@@ -605,16 +823,77 @@
         return subTotal + taxAmount;
     }
 
+    private void AddEditInvoiceItem()
+    {
+        editForm.Items.Add(new EditInvoiceItemDto { Quantity = 1, UnitPrice = 0 });
+    }
+
+    private void RemoveEditInvoiceItem(int index)
+    {
+        if (editForm.Items.Count > 1)
+        {
+            editForm.Items.RemoveAt(index);
+        }
+    }
+
+    private void UpdateEditItemQuantity(int index, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int quantity))
+        {
+            editForm.Items[index].Quantity = Math.Max(1, quantity);
+        }
+        StateHasChanged();
+    }
+
+    private void UpdateEditItemPrice(int index, ChangeEventArgs e)
+    {
+        if (decimal.TryParse(e.Value?.ToString(), out decimal price))
+        {
+            editForm.Items[index].UnitPrice = Math.Max(0, price);
+        }
+        StateHasChanged();
+    }
+
+    private decimal GetEditInvoiceTotal()
+    {
+        var subTotal = editForm.Items.Sum(item => item.Quantity * item.UnitPrice);
+        var taxAmount = subTotal * 0.08m; // 8% tax
+        return subTotal + taxAmount;
+    }
+
     private void ViewInvoice(int invoiceId)
     {
-        // Navigate to invoice details page
-        // Navigation.NavigateTo($"/invoices/{invoiceId}");
+        viewInvoice = invoices.FirstOrDefault(i => i.Id == invoiceId);
+        if (viewInvoice != null)
+        {
+            showViewModal = true;
+        }
     }
 
     private void EditInvoice(int invoiceId)
     {
-        // Navigate to invoice edit page
-        // Navigation.NavigateTo($"/invoices/{invoiceId}/edit");
+        var invoice = invoices.FirstOrDefault(i => i.Id == invoiceId);
+        if (invoice != null)
+        {
+            editForm = new EditInvoiceDto
+            {
+                Id = invoice.Id,
+                InvoiceNumber = invoice.InvoiceNumber,
+                CustomerId = invoice.CustomerId,
+                InvoiceDate = invoice.InvoiceDate,
+                Description = invoice.Description,
+                Notes = invoice.Notes,
+                Status = invoice.Status,
+                Items = invoice.Items.Select(item => new EditInvoiceItemDto
+                {
+                    ProductId = item.ProductId,
+                    Description = item.Description,
+                    Quantity = item.Quantity,
+                    UnitPrice = item.UnitPrice
+                }).ToList()
+            };
+            showEditModal = true;
+        }
     }
 
     private void RecordPayment(int invoiceId)
@@ -661,10 +940,174 @@
         ClosePaymentModal();
     }
 
-    private void PrintInvoice(int invoiceId)
+    private void CloseViewModal()
     {
-        // Generate PDF or print invoice
-        // Implementation would call a service to generate PDF
+        showViewModal = false;
+        viewInvoice = null;
+    }
+
+    private void CloseEditModal()
+    {
+        showEditModal = false;
+        editForm = new EditInvoiceDto();
+    }
+
+    private async Task SaveEditedInvoice()
+    {
+        var invoice = invoices.FirstOrDefault(i => i.Id == editForm.Id);
+        if (invoice != null)
+        {
+            // Update invoice with edited data
+            var customer = customers.FirstOrDefault(c => c.Id == editForm.CustomerId);
+            invoice.CustomerId = editForm.CustomerId;
+            invoice.CustomerName = customer?.Name ?? "Unknown Customer";
+            invoice.InvoiceDate = editForm.InvoiceDate;
+            invoice.Description = editForm.Description;
+            invoice.Notes = editForm.Notes;
+            invoice.Status = editForm.Status;
+            
+            // Recalculate totals
+            var subTotal = editForm.Items.Sum(item => item.Quantity * item.UnitPrice);
+            var taxAmount = subTotal * 0.08m; // 8% tax
+            invoice.SubTotal = subTotal;
+            invoice.TaxAmount = taxAmount;
+            invoice.TotalAmount = subTotal + taxAmount;
+            invoice.BalanceAmount = invoice.TotalAmount - invoice.PaidAmount;
+            
+            // Update items
+            invoice.Items = editForm.Items.Select(item => new InvoiceItemDto
+            {
+                ProductId = item.ProductId,
+                ProductName = products.FirstOrDefault(p => p.Id == item.ProductId)?.Name ?? "Custom Item",
+                Description = item.Description,
+                Quantity = item.Quantity,
+                UnitPrice = item.UnitPrice,
+                TotalPrice = item.Quantity * item.UnitPrice,
+                LineTotal = item.Quantity * item.UnitPrice,
+                TaxRate = 0.08m // 8% tax rate
+            }).ToList();
+            
+            FilterInvoices();
+        }
+        
+        CloseEditModal();
+    }
+
+    private async void PrintInvoice(int invoiceId)
+    {
+        try
+        {
+            Console.WriteLine($"PrintInvoice called for invoice ID: {invoiceId}");
+            var invoice = await InvoiceService.GetInvoiceByIdAsync(invoiceId);
+            if (invoice == null) 
+            {
+                Console.WriteLine("Invoice not found");
+                return;
+            }
+
+            Console.WriteLine($"Invoice found: {invoice.InvoiceNumber}");
+            var invoiceHtml = GenerateInvoiceHtml(invoice);
+            Console.WriteLine($"Generated HTML length: {invoiceHtml.Length}");
+            
+            // Check if JavaScript function exists
+            var jsExists = await JSRuntime.InvokeAsync<bool>("eval", "typeof window.printUtils !== 'undefined' && typeof window.printUtils.printInvoice === 'function'");
+            Console.WriteLine($"JavaScript function exists: {jsExists}");
+            
+            if (jsExists)
+            {
+                await JSRuntime.InvokeVoidAsync("printUtils.printInvoice", invoiceHtml);
+                Console.WriteLine("JavaScript function called successfully");
+            }
+            else
+            {
+                Console.WriteLine("JavaScript function not found");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error printing invoice: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+        }
+    }
+
+    private async void TestJavaScript()
+    {
+        try
+        {
+            Console.WriteLine("Testing JavaScript...");
+            var jsExists = await JSRuntime.InvokeAsync<bool>("eval", "typeof window.printUtils !== 'undefined'");
+            Console.WriteLine($"printUtils exists: {jsExists}");
+            
+            if (jsExists)
+            {
+                await JSRuntime.InvokeVoidAsync("printUtils.testFunction");
+            }
+            else
+            {
+                Console.WriteLine("printUtils not found");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error testing JavaScript: {ex.Message}");
+        }
+    }
+
+    private string GenerateInvoiceHtml(InvoiceDto invoice)
+    {
+        var html = "<div class='header'>" +
+                   "<h1>INVOICE</h1>" +
+                   "<h2>#" + invoice.InvoiceNumber + "</h2>" +
+                   "</div>" +
+                   "<div class='invoice-details'>" +
+                   "<table>" +
+                   "<tr><td><strong>Customer:</strong></td><td>" + invoice.CustomerName + "</td><td><strong>Invoice Date:</strong></td><td>" + invoice.InvoiceDate.ToString("MMMM dd, yyyy") + "</td></tr>" +
+                   "<tr><td><strong>Status:</strong></td><td>" + invoice.Status + "</td><td><strong>Due Date:</strong></td><td>" + invoice.DueDate.ToString("MMMM dd, yyyy") + "</td></tr>" +
+                   "</table>" +
+                   "</div>" +
+                   "<table class='items-table'>" +
+                   "<thead>" +
+                   "<tr>" +
+                   "<th>Description</th>" +
+                   "<th>Qty</th>" +
+                   "<th>Unit Price</th>" +
+                   "<th>Tax Rate</th>" +
+                   "<th>Total</th>" +
+                   "</tr>" +
+                   "</thead>" +
+                   "<tbody>";
+
+        foreach (var item in invoice.Items)
+        {
+            html += "<tr>" +
+                    "<td>" + item.Description + "</td>" +
+                    "<td>" + item.Quantity + "</td>" +
+                    "<td>" + item.UnitPrice.ToString("C") + "</td>" +
+                    "<td>" + item.TaxRate.ToString("P") + "</td>" +
+                    "<td>" + item.TotalPrice.ToString("C") + "</td>" +
+                    "</tr>";
+        }
+
+        html += "</tbody>" +
+                "</table>" +
+                "<div class='total'>" +
+                "<p><strong>Subtotal: " + invoice.SubTotal.ToString("C") + "</strong></p>" +
+                "<p><strong>Tax: " + invoice.TaxAmount.ToString("C") + "</strong></p>" +
+                "<p><strong>Discount: " + invoice.DiscountAmount.ToString("C") + "</strong></p>" +
+                "<p><strong>Total: " + invoice.TotalAmount.ToString("C") + "</strong></p>" +
+                "<p><strong>Paid: " + invoice.PaidAmount.ToString("C") + "</strong></p>" +
+                "<p><strong>Balance Due: " + invoice.BalanceAmount.ToString("C") + "</strong></p>" +
+                "</div>";
+
+        if (!string.IsNullOrEmpty(invoice.Notes))
+        {
+            html += "<div style='margin-top: 20px;'>" +
+                    "<strong>Notes:</strong><br>" +
+                    invoice.Notes +
+                    "</div>";
+        }
+
+        return html;
     }
 
     private void DeleteInvoice(int invoiceId)

@@ -42,8 +42,6 @@ public class CreateInvoiceDto
 {
     public int CustomerId { get; set; }
     public DateTime InvoiceDate { get; set; } = DateTime.Now;
-    public DateTime DueDate { get; set; } = DateTime.Now.AddDays(30);
-    public decimal DiscountAmount { get; set; }
     public string Notes { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public List<CreateInvoiceLineDto> LineItems { get; set; } = new();
@@ -90,4 +88,24 @@ public class CreateInvoiceItemDto
     public int Quantity { get; set; }
     public decimal UnitPrice { get; set; }
     public decimal TaxRate { get; set; }
+}
+
+public class EditInvoiceDto
+{
+    public int Id { get; set; }
+    public string InvoiceNumber { get; set; } = string.Empty;
+    public int CustomerId { get; set; }
+    public DateTime InvoiceDate { get; set; }
+    public string Description { get; set; } = string.Empty;
+    public string Notes { get; set; } = string.Empty;
+    public InvoiceStatus Status { get; set; }
+    public List<EditInvoiceItemDto> Items { get; set; } = new();
+}
+
+public class EditInvoiceItemDto
+{
+    public int ProductId { get; set; }
+    public string Description { get; set; } = string.Empty;
+    public int Quantity { get; set; }
+    public decimal UnitPrice { get; set; }
 }
