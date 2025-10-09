@@ -2,6 +2,7 @@
 @page "/home"
 @inject NavigationManager Navigation
 @inject AccountingPro.Application.Services.IDashboardService DashboardService
+@inject AccountingPro.Application.Services.ICompanyContextService CompanyContext
 
 <PageTitle>Dashboard - AccountingPro</PageTitle>
 
@@ -37,6 +38,32 @@
 </div>
 
 <!-- Key Metrics Section -->
+@if (isLoading)
+{
+    <div class="metrics-section">
+        <div class="container-fluid">
+            <div class="text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading dashboard...</p>
+            </div>
+        </div>
+    </div>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="metrics-section">
+        <div class="container-fluid">
+            <div class="alert alert-warning text-center">
+                <i class="fas fa-exclamation-triangle"></i>
+                @errorMessage
+            </div>
+        </div>
+    </div>
+}
+else
+{
 <div class="metrics-section">
     <div class="container-fluid">
         <h2 class="section-title mb-5">
@@ -137,6 +164,7 @@
         </div>
     </div>
 </div>
+}
 
 <!-- Quick Actions Section -->
 <div class="quick-actions-section">
@@ -208,121 +236,36 @@
     </div>
 </div>
 
-<!-- Feature Modules Section -->
-<div class="modules-section">
-    <div class="container-fluid">
-        <h2 class="section-title mb-5">
-            <i class="fas fa-th-large"></i> Business Modules
-        </h2>
-        <div class="row g-4">
-            <!-- Sales Module -->
-            <div class="col-lg-4 col-md-6">
-                <div class="module-card sales-module">
-                    <div class="module-header">
-                        <i class="fas fa-handshake"></i>
-                        <h3>Sales Management</h3>
-                    </div>
-                    <div class="module-body">
-                        <div class="module-feature" @onclick="NavigateToCustomers">
-                            <i class="fas fa-users"></i>
-                            <div>
-                                <h5>Customer Management</h5>
-                                <p>Manage customer information and relationships</p>
-                            </div>
-                        </div>
-                        <div class="module-feature" @onclick="NavigateToInvoices">
-                            <i class="fas fa-file-invoice"></i>
-                            <div>
-                                <h5>Invoice Creation</h5>
-                                <p>Professional invoicing with automatic calculations</p>
-                            </div>
-                        </div>
-                        <div class="module-feature" @onclick="NavigateToInvoices">
-                            <i class="fas fa-money-check-alt"></i>
-                            <div>
-                                <h5>Payment Tracking</h5>
-                                <p>Monitor payments and outstanding balances</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Purchase Module -->
-            <div class="col-lg-4 col-md-6">
-                <div class="module-card purchase-module">
-                    <div class="module-header">
-                        <i class="fas fa-shopping-cart"></i>
-                        <h3>Purchase Management</h3>
-                    </div>
-                    <div class="module-body">
-                        <div class="module-feature" @onclick="NavigateToSuppliers">
-                            <i class="fas fa-truck"></i>
-                            <div>
-                                <h5>Supplier Management</h5>
-                                <p>Maintain supplier records and payment terms</p>
-                            </div>
-                        </div>
-                        <div class="module-feature" @onclick="NavigateToBills">
-                            <i class="fas fa-receipt"></i>
-                            <div>
-                                <h5>Bill Management</h5>
-                                <p>Record and track supplier bills and expenses</p>
-                            </div>
-                        </div>
-                        <div class="module-feature" @onclick="NavigateToBills">
-                            <i class="fas fa-credit-card"></i>
-                            <div>
-                                <h5>Expense Tracking</h5>
-                                <p>Monitor all business expenses and payments</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Financial Module -->
-            <div class="col-lg-4 col-md-6">
-                <div class="module-card financial-module">
-                    <div class="module-header">
-                        <i class="fas fa-chart-line"></i>
-                        <h3>Financial Reports</h3>
-                    </div>
-                    <div class="module-body">
-                        <div class="module-feature" @onclick="NavigateToReports">
-                            <i class="fas fa-chart-pie"></i>
-                            <div>
-                                <h5>Profit & Loss</h5>
-                                <p>Comprehensive P&L statements and analysis</p>
-                            </div>
-                        </div>
-                        <div class="module-feature" @onclick="NavigateToReports">
-                            <i class="fas fa-balance-scale"></i>
-                            <div>
-                                <h5>Balance Sheet</h5>
-                                <p>Company's financial position overview</p>
-                            </div>
-                        </div>
-                        <div class="module-feature" @onclick="NavigateToReports">
-                            <i class="fas fa-stream"></i>
-                            <div>
-                                <h5>Cash Flow</h5>
-                                <p>Monitor cash inflows and outflows</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 @code {
     private AccountingPro.Application.Services.DashboardMetricsDto? metrics;
+    private bool isLoading = true;
+    private string? errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
-        metrics = await DashboardService.GetDashboardMetricsAsync();
+        try
+        {
+            // Ensure company context is initialized
+            await CompanyContext.InitializeAsync();
+            
+            if (CompanyContext.CurrentCompanyId.HasValue)
+            {
+                metrics = await DashboardService.GetDashboardMetricsAsync();
+            }
+            else
+            {
+                errorMessage = "Please select a company to view dashboard metrics.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Home: Error: {ex.Message}");
+            errorMessage = "Unable to load dashboard metrics. Please try again.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 
     private void NavigateToInvoices() => Navigation.NavigateTo("/invoices");

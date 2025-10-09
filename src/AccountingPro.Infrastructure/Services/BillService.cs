@@ -11,18 +11,30 @@ public class BillService : IBillService
 {
     private readonly AccountingDbContext _context;
     private readonly IMapper _mapper;
+    private readonly ICompanyContextService _companyContext;
+    private const string NoCompanyContextError =
+        "No company context is set. Please select a company.";
 
-    public BillService(AccountingDbContext context, IMapper mapper)
+    public BillService(
+        AccountingDbContext context,
+        IMapper mapper,
+        ICompanyContextService companyContext
+    )
     {
         _context = context;
         _mapper = mapper;
+        _companyContext = companyContext;
     }
 
     public async Task<List<BillDto>> GetAllBillsAsync()
     {
+        if (_companyContext.CurrentCompanyId == null)
+            return new List<BillDto>();
+
         var bills = await _context
             .Bills.Include(b => b.Supplier)
             .Include(b => b.BillItems)
+            .Where(b => b.CompanyId == _companyContext.CurrentCompanyId)
             .OrderByDescending(b => b.BillDate)
             .ToListAsync();
 

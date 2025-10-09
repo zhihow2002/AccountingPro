@@ -11,7 +11,10 @@ builder.Services.AddServerSideBlazor();
 
 // Add Entity Framework
 builder.Services.AddDbContext<AccountingDbContext>(
-    options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
+    options => options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        sqlOptions => sqlOptions.EnableRetryOnFailure()
+    )
 );
 
 // Add MediatR
@@ -55,6 +58,22 @@ builder.Services.AddScoped<
     AccountingPro.Application.Services.ICompanyService,
     AccountingPro.Infrastructure.Services.CompanyService
 >();
+builder.Services.AddScoped<
+    AccountingPro.Application.Services.IReportService,
+    AccountingPro.Infrastructure.Services.ReportService
+>();
+builder.Services.AddScoped<
+    AccountingPro.Application.Services.IPaymentService,
+    AccountingPro.Infrastructure.Services.PaymentService
+>();
+builder.Services.AddScoped<
+    AccountingPro.Application.Services.IBalanceSheetService,
+    AccountingPro.Infrastructure.Services.BalanceSheetService
+>();
+builder.Services.AddScoped<
+    AccountingPro.Application.Services.ICountryService,
+    AccountingPro.Infrastructure.Services.CountryService
+>();
 
 // Add HttpClient for API calls
 builder.Services.AddHttpClient(
@@ -87,7 +106,6 @@ app.MapFallbackToPage("/_Host");
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AccountingDbContext>();
-    var companyContext = scope.ServiceProvider.GetRequiredService<AccountingPro.Application.Services.ICompanyContextService>();
 
     // Apply any pending migrations
     await context.Database.MigrateAsync();
@@ -95,8 +113,7 @@ using (var scope = app.Services.CreateScope())
     // Seed initial data
     await DataSeeder.SeedDataAsync(context);
 
-    // Set default company context
-    await companyContext.SetCurrentCompanyAsync(1); // Default to Sample Company
+    // Company context will be initialized automatically by CompanyContextService
 }
 
 await app.RunAsync();

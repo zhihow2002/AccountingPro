@@ -5,6 +5,7 @@
 @inject IInvoiceService InvoiceService
 @inject IProductService ProductService
 @inject ICustomerService CustomerService
+@inject ICompanyContextService CompanyContext
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 
@@ -600,9 +601,21 @@
     private InvoiceDto? viewInvoice;
     private EditInvoiceDto editForm = new();
 
+    private bool isLoaded = false;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadInvoices();
+        isLoaded = true;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Only reload if component was already loaded (not initial load)
+        if (isLoaded)
+        {
+            await LoadInvoices();
+        }
     }
 
     private async Task LoadInvoices()
@@ -991,16 +1004,24 @@
         try
         {
             Console.WriteLine($"PrintInvoice called for invoice ID: {invoiceId}");
+            
+            // Ensure company context is initialized
+            await CompanyContext.InitializeAsync();
+            Console.WriteLine($"Company context initialized. CurrentCompanyId: {CompanyContext.CurrentCompanyId}");
+            
             var invoice = await InvoiceService.GetInvoiceByIdAsync(invoiceId);
             if (invoice == null) 
             {
                 Console.WriteLine("Invoice not found");
+                await JSRuntime.InvokeVoidAsync("alert", "Invoice not found!");
                 return;
             }
 
             Console.WriteLine($"Invoice found: {invoice.InvoiceNumber}");
+            Console.WriteLine($"Invoice has {invoice.Items?.Count ?? 0} items");
             var invoiceHtml = GenerateInvoiceHtml(invoice);
             Console.WriteLine($"Generated HTML length: {invoiceHtml.Length}");
+            Console.WriteLine($"Generated HTML preview: {invoiceHtml.Substring(0, Math.Min(200, invoiceHtml.Length))}");
             
             // Check if JavaScript function exists
             var jsExists = await JSRuntime.InvokeAsync<bool>("eval", new object[] { "typeof window.printUtils !== 'undefined' && typeof window.printUtils.printInvoice === 'function'" });
@@ -1013,13 +1034,15 @@
             }
             else
             {
-                Console.WriteLine("JavaScript function not found");
+                Console.WriteLine("JavaScript function not found - trying to alert");
+                await JSRuntime.InvokeVoidAsync("alert", "JavaScript print function not found!");
             }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error printing invoice: {ex.Message}");
             Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            await JSRuntime.InvokeVoidAsync("alert", $"Error printing invoice: {ex.Message}");
         }
     }
 
@@ -1033,11 +1056,12 @@
             
             if (jsExists)
             {
-                await JSRuntime.InvokeAsync<object>("printUtils.testFunction", Array.Empty<object>());
+                await JSRuntime.InvokeAsync<object>("printUtils.testPrint", Array.Empty<object>());
             }
             else
             {
                 Console.WriteLine("printUtils not found");
+                await JSRuntime.InvokeVoidAsync("alert", "printUtils not found!");
             }
         }
         catch (Exception ex)
@@ -1057,33 +1081,42 @@
                    "<tr><td><strong>Customer:</strong></td><td>" + invoice.CustomerName + "</td><td><strong>Invoice Date:</strong></td><td>" + invoice.InvoiceDate.ToString("MMMM dd, yyyy") + "</td></tr>" +
                    "<tr><td><strong>Status:</strong></td><td>" + invoice.Status + "</td><td><strong>Due Date:</strong></td><td>" + invoice.DueDate.ToString("MMMM dd, yyyy") + "</td></tr>" +
                    "</table>" +
-                   "</div>" +
-                   "<table class='items-table'>" +
-                   "<thead>" +
-                   "<tr>" +
-                   "<th>Description</th>" +
-                   "<th>Qty</th>" +
-                   "<th>Unit Price</th>" +
-                   "<th>Tax Rate</th>" +
-                   "<th>Total</th>" +
-                   "</tr>" +
-                   "</thead>" +
-                   "<tbody>";
+                   "</div>";
 
-        foreach (var item in invoice.Items)
+        if (invoice.Items != null && invoice.Items.Any())
         {
-            html += "<tr>" +
-                    "<td>" + item.Description + "</td>" +
-                    "<td>" + item.Quantity + "</td>" +
-                    "<td>" + item.UnitPrice.ToString("C") + "</td>" +
-                    "<td>" + item.TaxRate.ToString("P") + "</td>" +
-                    "<td>" + item.TotalPrice.ToString("C") + "</td>" +
-                    "</tr>";
+            html += "<table class='items-table'>" +
+                    "<thead>" +
+                    "<tr>" +
+                    "<th>Description</th>" +
+                    "<th>Qty</th>" +
+                    "<th>Unit Price</th>" +
+                    "<th>Tax Rate</th>" +
+                    "<th>Total</th>" +
+                    "</tr>" +
+                    "</thead>" +
+                    "<tbody>";
+
+            foreach (var item in invoice.Items)
+            {
+                html += "<tr>" +
+                        "<td>" + item.Description + "</td>" +
+                        "<td>" + item.Quantity + "</td>" +
+                        "<td>" + item.UnitPrice.ToString("C") + "</td>" +
+                        "<td>" + item.TaxRate.ToString("P") + "</td>" +
+                        "<td>" + item.TotalPrice.ToString("C") + "</td>" +
+                        "</tr>";
+            }
+
+            html += "</tbody>" +
+                    "</table>";
+        }
+        else
+        {
+            html += "<p><em>No items found on this invoice.</em></p>";
         }
 
-        html += "</tbody>" +
-                "</table>" +
-                "<div class='total'>" +
+        html += "<div class='total'>" +
                 "<p><strong>Subtotal: " + invoice.SubTotal.ToString("C") + "</strong></p>" +
                 "<p><strong>Tax: " + invoice.TaxAmount.ToString("C") + "</strong></p>" +
                 "<p><strong>Discount: " + invoice.DiscountAmount.ToString("C") + "</strong></p>" +

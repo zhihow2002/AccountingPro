@@ -17,13 +17,16 @@ public class CompanyService : ICompanyService
     public async Task<List<Company>> GetAllCompaniesAsync()
     {
         return await _context.Companies
+            .AsNoTracking()
             .OrderBy(c => c.Name)
             .ToListAsync();
     }
 
     public async Task<Company?> GetCompanyByIdAsync(int id)
     {
-        return await _context.Companies.FindAsync(id);
+        return await _context.Companies
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == id);
     }
 
     public async Task<Company> CreateCompanyAsync(Company company)

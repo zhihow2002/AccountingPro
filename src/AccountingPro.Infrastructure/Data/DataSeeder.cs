@@ -1,6 +1,5 @@
 using AccountingPro.Core.Entities;
 using AccountingPro.Core.Enums;
-using AccountingPro.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace AccountingPro.Infrastructure.Data;
@@ -28,6 +27,9 @@ public static class DataSeeder
         {
             await SeedAccountingPeriodsAsync(context);
         }
+
+        // Seed test data for development
+        await SeedTestDataAsync(context);
 
         await context.SaveChangesAsync();
     }
@@ -280,5 +282,119 @@ public static class DataSeeder
 
         context.AccountingPeriods.AddRange(periods);
         await context.SaveChangesAsync();
+    }
+
+    private static async Task SeedTestDataAsync(AccountingDbContext context)
+    {
+        var company = await context.Companies.FirstAsync();
+        
+        // Seed customers
+        if (!await context.Customers.AnyAsync())
+        {
+            var customers = new List<Customer>
+            {
+                new Customer
+                {
+                    Name = "Acme Corporation",
+                    CompanyName = "Acme Corporation",
+                    Email = "billing@acme.com",
+                    Phone = "+1 (555) 123-4567",
+                    Address = "123 Business St, Business City, BC 12345",
+                    CompanyId = company.Id,
+                    Status = Core.Enums.CustomerStatus.Active,
+                    CreatedAt = DateTime.UtcNow
+                },
+                new Customer
+                {
+                    Name = "Global Industries",
+                    CompanyName = "Global Industries Inc",
+                    Email = "accounts@globalind.com",
+                    Phone = "+1 (555) 987-6543",
+                    Address = "456 Industrial Ave, Industrial City, IC 67890",
+                    CompanyId = company.Id,
+                    Status = Core.Enums.CustomerStatus.Active,
+                    CreatedAt = DateTime.UtcNow
+                }
+            };
+            context.Customers.AddRange(customers);
+            await context.SaveChangesAsync();
+        }
+
+        // Seed products
+        if (!await context.Products.AnyAsync())
+        {
+            var products = new List<Product>
+            {
+                new Product
+                {
+                    Name = "Consulting Services",
+                    Description = "Professional consulting services",
+                    SKU = "CONSULT-001",
+                    SalePrice = 150.00m,
+                    CompanyId = company.Id,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                },
+                new Product
+                {
+                    Name = "Software License",
+                    Description = "Annual software license",
+                    SKU = "SOFTWARE-001",
+                    SalePrice = 999.00m,
+                    CompanyId = company.Id,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                }
+            };
+            context.Products.AddRange(products);
+            await context.SaveChangesAsync();
+        }
+
+        // Seed a test invoice
+        if (!await context.Invoices.AnyAsync())
+        {
+            var customer = await context.Customers.FirstAsync();
+            var product = await context.Products.FirstAsync();
+            
+            var invoice = new Invoice
+            {
+                InvoiceNumber = "INV-202410-0001",
+                CustomerId = customer.Id,
+                CompanyId = company.Id,
+                InvoiceDate = DateTime.UtcNow.Date,
+                DueDate = DateTime.UtcNow.Date.AddDays(30),
+                Status = Core.Enums.InvoiceStatus.Sent,
+                Notes = "Test invoice for printing functionality",
+                CreatedAt = DateTime.UtcNow
+            };
+            
+            context.Invoices.Add(invoice);
+            await context.SaveChangesAsync();
+            
+            // Add invoice items
+            var invoiceItem = new InvoiceItem
+            {
+                InvoiceId = invoice.Id,
+                ProductId = product.Id,
+                Description = product.Description,
+                Quantity = 2,
+                UnitPrice = product.SalePrice,
+                TaxRate = 0.10m, // 10% tax
+                TaxAmount = 2 * product.SalePrice * 0.10m,
+                LineTotal = 2 * product.SalePrice * 1.10m,
+                CreatedAt = DateTime.UtcNow
+            };
+            
+            context.InvoiceItems.Add(invoiceItem);
+            await context.SaveChangesAsync();
+            
+            // Update invoice totals
+            invoice.SubTotal = 2 * product.SalePrice;
+            invoice.TaxAmount = invoice.SubTotal * 0.10m;
+            invoice.TotalAmount = invoice.SubTotal + invoice.TaxAmount;
+            invoice.BalanceAmount = invoice.TotalAmount;
+            
+            await context.SaveChangesAsync();
+        }
     }
 }

@@ -1,0 +1,172 @@
+@page "/payments/receipt/print/{id:int}"
+@using AccountingPro.Application.DTOs
+@using AccountingPro.Application.Services
+@using AccountingPro.Core.Entities
+@inject IPaymentService PaymentService
+@inject ICompanyService CompanyService
+@inject IJSRuntime JS
+
+<PageTitle>Payment Receipt - AccountingPro</PageTitle>
+
+<div class="container-fluid p-4" id="printableArea">
+    @if (_payment != null && _company != null)
+    {
+        <div class="receipt-wrapper" style="max-width: 800px; margin: 0 auto; background: white; padding: 40px; border: 1px solid #ddd;">
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <h2 class="mb-1">@_company.Name</h2>
+                <p class="mb-0 text-muted">@_company.Address</p>
+                <p class="mb-0 text-muted">@_company.Phone | @_company.Email</p>
+                @if (!string.IsNullOrEmpty(_company.TaxId))
+                {
+                    <p class="mb-0 text-muted">Tax ID: @_company.TaxId</p>
+                }
+            </div>
+
+            <hr class="my-4" />
+
+            <!-- Receipt Title -->
+            <div class="text-center mb-4">
+                <h3 class="mb-0">PAYMENT RECEIPT</h3>
+                <p class="text-muted mb-0">Receipt No: @_payment.PaymentNumber</p>
+            </div>
+
+            <!-- Payment Details -->
+            <div class="row mb-4">
+                <div class="col-6">
+                    <strong>Date:</strong><br />
+                    @_payment.PaymentDate.ToString("MMMM dd, yyyy")
+                </div>
+                <div class="col-6 text-end">
+                    <strong>Status:</strong><br />
+                    <span class="badge bg-success">@_payment.Status</span>
+                </div>
+            </div>
+
+            <!-- Customer Details -->
+            @if (!string.IsNullOrEmpty(_payment.CustomerName))
+            {
+                <div class="mb-4">
+                    <h5>Received From:</h5>
+                    <p class="mb-0">@_payment.CustomerName</p>
+                </div>
+            }
+
+            <!-- Payment Information -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <strong>Payment Method:</strong><br />
+                            @_payment.PaymentMethod
+                        </div>
+                        @if (!string.IsNullOrEmpty(_payment.Reference))
+                        {
+                            <div class="col-md-6 mb-3">
+                                <strong>Reference:</strong><br />
+                                @_payment.Reference
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(_payment.InvoiceNumber))
+                        {
+                            <div class="col-md-6 mb-3">
+                                <strong>Invoice Number:</strong><br />
+                                @_payment.InvoiceNumber
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Amount -->
+            <div class="card mb-4" style="background-color: #f8f9fa;">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-6">
+                            <h5 class="mb-0">Amount Paid:</h5>
+                        </div>
+                        <div class="col-6 text-end">
+                            <h3 class="mb-0">@_payment.Amount.ToString("C")</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            @if (!string.IsNullOrEmpty(_payment.Notes))
+            {
+                <div class="mb-4">
+                    <strong>Notes:</strong>
+                    <p class="mb-0">@_payment.Notes</p>
+                </div>
+            }
+
+            <hr class="my-4" />
+
+            <!-- Footer -->
+            <div class="text-center text-muted">
+                <p class="mb-0">Thank you for your payment!</p>
+                <p class="mb-0" style="font-size: 0.875rem;">This is a computer-generated receipt.</p>
+            </div>
+        </div>
+    }
+    else if (_isLoading)
+    {
+        <div class="text-center p-5">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-danger">
+            Payment receipt not found.
+        </div>
+    }
+</div>
+
+<!-- Print/Close Buttons -->
+<div class="text-center mt-4 no-print">
+    <button class="btn btn-primary btn-lg me-2" @onclick="PrintReceipt">
+        <i class="bi bi-printer"></i> Print Receipt
+    </button>
+    <a href="/payments" class="btn btn-secondary btn-lg">
+        <i class="bi bi-arrow-left"></i> Back to Payments
+    </a>
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private PaymentDto? _payment;
+    private Company? _company;
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _payment = await PaymentService.GetPaymentByIdAsync(Id);
+            
+            if (_payment != null)
+            {
+                _company = await CompanyService.GetCompanyByIdAsync(_payment.CompanyId);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading payment receipt: {ex.Message}");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task PrintReceipt()
+    {
+        await JS.InvokeVoidAsync("window.print");
+    }
+}

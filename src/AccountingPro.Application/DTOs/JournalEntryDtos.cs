@@ -82,3 +82,20 @@ public class IncomeStatementAccountDto
     public string Name { get; set; } = string.Empty;
     public decimal Amount { get; set; }
 }
+
+public class TrialBalanceEntryDto
+{
+    public int AccountId { get; set; }
+    public string AccountCode { get; set; } = string.Empty;
+    public string AccountName { get; set; } = string.Empty;
+    public decimal Debit { get; set; }
+    public decimal Credit { get; set; }
+}
+
+public class TrialBalanceSummaryDto
+{
+    public IReadOnlyList<TrialBalanceEntryDto> Entries { get; set; } = Array.Empty<TrialBalanceEntryDto>();
+    public decimal TotalDebit { get; set; }
+    public decimal TotalCredit { get; set; }
+    public decimal Difference => TotalDebit - TotalCredit;
+}

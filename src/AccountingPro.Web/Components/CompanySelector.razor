@@ -4,73 +4,137 @@
 @inject NavigationManager Navigation
 
 <div class="company-selector">
-    <div class="form-group">
-        <label for="companySelect">Current Company:</label>
-        <select id="companySelect" @bind-value="SelectedCompanyId" @bind-value:event="onchange" class="form-control">
-            <option value="">Select Company...</option>
-            @foreach (var company in Companies)
-            {
-                <option value="@company.Id">@company.Name (@company.Code)</option>
-            }
-        </select>
-    </div>
     @if (CompanyContext.CurrentCompany != null)
     {
-        <div class="company-info">
-            <small class="text-muted">
-                <strong>@CompanyContext.CurrentCompany.Name</strong><br>
-                @CompanyContext.CurrentCompany.Address<br>
-                Tax ID: @CompanyContext.CurrentCompany.TaxId
-            </small>
+        <div class="company-display">
+            <i class="fas fa-building text-primary me-2"></i>
+            <div class="company-details">
+                <div class="company-name">@CompanyContext.CurrentCompany.Name</div>
+                <small class="company-code text-muted">@CompanyContext.CurrentCompany.Code</small>
+            </div>
         </div>
     }
+    <select id="companySelect" @bind-value="SelectedCompanyId" @bind-value:event="onchange" class="form-select form-select-sm company-dropdown">
+        <option value="">Select Company...</option>
+        @foreach (var company in Companies)
+        {
+            <option value="@company.Id">@company.Name (@company.Code)</option>
+        }
+    </select>
 </div>
 
 @code {
     private List<Company> Companies = new();
+    private int? _selectedCompanyId;
+    
     private int SelectedCompanyId 
     { 
-        get => CompanyContext.CurrentCompanyId ?? 0;
-        set => _ = OnCompanyChangedAsync(value);
+        get => _selectedCompanyId ?? 0;
+        set
+        {
+            if (_selectedCompanyId != value)
+            {
+                _selectedCompanyId = value;
+                _ = OnCompanyChangedAsync(value);
+            }
+        }
     }
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadCompanies();
-    }
-
-    private async Task LoadCompanies()
-    {
-        Companies = await CompanyContext.GetUserCompaniesAsync();
+        try
+        {
+            // Initialize the company context
+            await CompanyContext.InitializeAsync();
+            
+            // Load the list of companies
+            Companies = await CompanyContext.GetUserCompaniesAsync();
+            
+            // Set the selected value
+            _selectedCompanyId = CompanyContext.CurrentCompanyId;
+            
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"CompanySelector: Error during initialization: {ex.Message}");
+        }
     }
 
     private async Task OnCompanyChangedAsync(int companyId)
     {
-        if (companyId > 0)
+        try
         {
-            await CompanyContext.SetCurrentCompanyAsync(companyId);
-            // Refresh the page to reload data for the new company
-            Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+            if (companyId > 0)
+            {
+                await CompanyContext.SetCurrentCompanyAsync(companyId);
+                // Refresh the page to reload data for the new company
+                Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+            }
+            else
+            {
+                await CompanyContext.ClearCurrentCompanyAsync();
+                StateHasChanged();
+            }
         }
-        else
+        catch (Exception ex)
         {
-            await CompanyContext.ClearCurrentCompanyAsync();
+            Console.WriteLine($"CompanySelector: Error changing company: {ex.Message}");
         }
     }
 }
 
 <style>
 .company-selector {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.company-display {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
     background: #f8f9fa;
-    padding: 1rem;
-    border-radius: 0.5rem;
-    margin-bottom: 1rem;
+    border-radius: 0.375rem;
     border: 1px solid #dee2e6;
 }
 
-.company-info {
-    margin-top: 0.5rem;
-    padding-top: 0.5rem;
-    border-top: 1px solid #dee2e6;
+.company-display i {
+    font-size: 1.25rem;
+}
+
+.company-details {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+}
+
+.company-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #2c3e50;
+}
+
+.company-code {
+    font-size: 0.75rem;
+}
+
+.company-dropdown {
+    min-width: 200px;
+    max-width: 250px;
+}
+
+@@media (max-width: 768px) {
+    .company-selector {
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: flex-start;
+    }
+    
+    .company-dropdown {
+        width: 100%;
+        min-width: 100%;
+    }
 }
 </style>

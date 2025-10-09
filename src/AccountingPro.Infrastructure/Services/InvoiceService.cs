@@ -55,9 +55,19 @@ public class InvoiceService : IInvoiceService
         if (_companyContext.CurrentCompanyId == null)
             throw new InvalidOperationException(NoCompanyContextError);
 
+        var companyId = _companyContext.CurrentCompanyId.Value;
+
+        var companyConfig = await _context.Companies
+            .AsNoTracking()
+            .Where(c => c.Id == companyId)
+            .Select(c => new { c.EnableInvoiceTax })
+            .FirstOrDefaultAsync();
+
+        var applyTax = companyConfig?.EnableInvoiceTax ?? true;
+
         // Generate invoice number
         var lastInvoice = await _context
-            .Invoices.Where(i => i.CompanyId == _companyContext.CurrentCompanyId)
+            .Invoices.Where(i => i.CompanyId == companyId)
             .OrderByDescending(i => i.Id)
             .FirstOrDefaultAsync();
 
@@ -67,7 +77,7 @@ public class InvoiceService : IInvoiceService
         {
             InvoiceNumber = invoiceNumber,
             CustomerId = createInvoiceDto.CustomerId,
-            CompanyId = _companyContext.CurrentCompanyId.Value,
+            CompanyId = companyId,
             InvoiceDate = createInvoiceDto.InvoiceDate,
             DueDate = createInvoiceDto.InvoiceDate.AddDays(30), // Default due date 30 days from invoice date
             DiscountAmount = 0, // No discount by default
@@ -80,17 +90,19 @@ public class InvoiceService : IInvoiceService
         // Add invoice items
         foreach (var itemDto in createInvoiceDto.Items)
         {
+            var lineSubTotal = itemDto.Quantity * itemDto.UnitPrice;
+            var effectiveTaxRate = applyTax ? itemDto.TaxRate : 0;
+            var taxAmount = applyTax ? lineSubTotal * (effectiveTaxRate / 100) : 0;
+
             var invoiceItem = new InvoiceItem
             {
                 ProductId = itemDto.ProductId == 0 ? null : itemDto.ProductId,
                 Description = itemDto.Description,
                 Quantity = itemDto.Quantity,
                 UnitPrice = itemDto.UnitPrice,
-                TaxRate = itemDto.TaxRate,
-                TaxAmount = (itemDto.Quantity * itemDto.UnitPrice) * (itemDto.TaxRate / 100),
-                LineTotal =
-                    (itemDto.Quantity * itemDto.UnitPrice)
-                    + ((itemDto.Quantity * itemDto.UnitPrice) * (itemDto.TaxRate / 100)),
+                TaxRate = effectiveTaxRate,
+                TaxAmount = taxAmount,
+                LineTotal = lineSubTotal + taxAmount,
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = "System"
             };

@@ -1,0 +1,334 @@
+@page "/sales/cash/create"
+@using AccountingPro.Application.DTOs
+@using AccountingPro.Application.Services
+@using AccountingPro.Core.Enums
+@inject IPaymentService PaymentService
+@inject ICompanyContextService CompanyContext
+@inject ICustomerService CustomerService
+@inject IProductService ProductService
+@inject NavigationManager Navigation
+
+<PageTitle>Cash Sale - AccountingPro</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h2>Cash Sale</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/">Home</a></li>
+                    <li class="breadcrumb-item"><a href="/sales">Sales</a></li>
+                    <li class="breadcrumb-item active">Cash Sale</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @_errorMessage
+            <button type="button" class="btn-close" @onclick="() => _errorMessage = null"></button>
+        </div>
+    }
+
+    <EditForm Model="_sale" OnValidSubmit="HandleSubmit">
+        <div class="row g-3">
+            <div class="col-lg-8">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">Sale Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Sale Date <span class="text-danger">*</span></label>
+                                <InputDate @bind-Value="_sale.SaleDate" class="form-control" />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Customer</label>
+                                <InputSelect @bind-Value="_sale.CustomerId" class="form-select">
+                                    <option value="">-- Walk-in Customer --</option>
+                                    @foreach (var customer in _customers)
+                                    {
+                                        <option value="@customer.Id">@customer.Name</option>
+                                    }
+                                </InputSelect>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Payment Method <span class="text-danger">*</span></label>
+                                <InputSelect @bind-Value="_sale.Method" class="form-select">
+                                    <option value="@PaymentMethod.Cash">Cash</option>
+                                    <option value="@PaymentMethod.CreditCard">Credit Card</option>
+                                    <option value="@PaymentMethod.Check">Check</option>
+                                    <option value="@PaymentMethod.BankTransfer">Bank Transfer</option>
+                                    <option value="@PaymentMethod.Other">Other</option>
+                                </InputSelect>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Reference</label>
+                                <InputText @bind-Value="_sale.Reference" class="form-control" placeholder="Transaction ID, receipt #" />
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Notes</label>
+                                <InputTextArea @bind-Value="_sale.Notes" class="form-control" rows="2" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Items</h5>
+                        <button type="button" class="btn btn-sm btn-primary" @onclick="AddItem">
+                            <i class="bi bi-plus-circle"></i> Add Item
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        @if (!_sale.Items.Any())
+                        {
+                            <p class="text-muted">No items added. Click "Add Item" to get started.</p>
+                        }
+                        else
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Product</th>
+                                            <th style="width: 80px;">Qty</th>
+                                            <th style="width: 120px;">Unit Price</th>
+                                            <th style="width: 80px;">Tax %</th>
+                                            <th style="width: 120px;">Total</th>
+                                            <th style="width: 50px;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var (item, index) in _sale.Items.Select((i, idx) => (i, idx)))
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <select class="form-select form-select-sm" value="@item.ProductId"
+                                                            @onchange="e => OnProductChanged(index, e)">
+                                                        <option value="0">-- Select Product --</option>
+                                                        @foreach (var product in _products)
+                                                        {
+                                                            <option value="@product.Id">@product.Name</option>
+                                                        }
+                                                    </select>
+                                                    <input type="text" class="form-control form-control-sm mt-1" 
+                                                           placeholder="Description" 
+                                                           value="@item.Description"
+                                                           @onchange="e => { item.Description = e.Value?.ToString() ?? string.Empty; CalculateTotals(); }" />
+                                                </td>
+                                                <td>
+                                                    <input type="number" class="form-control form-control-sm" 
+                                                           value="@item.Quantity" min="1"
+                                                           @onchange="e => OnQuantityChanged(index, e)" />
+                                                </td>
+                                                <td>
+                                                    <input type="number" class="form-control form-control-sm" 
+                                                           value="@item.UnitPrice" step="0.01"
+                                                           @onchange="e => OnPriceChanged(index, e)" />
+                                                </td>
+                                                <td>
+                                                    <input type="number" class="form-control form-control-sm" 
+                                                           value="@item.TaxRate" step="0.01"
+                                                           @onchange="e => OnTaxRateChanged(index, e)" />
+                                                </td>
+                                                <td class="text-end">
+                                                    <strong>@item.LineTotal.ToString("C")</strong>
+                                                </td>
+                                                <td>
+                                                    <button type="button" class="btn btn-sm btn-danger" @onclick="() => RemoveItem(index)">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card sticky-top" style="top: 20px;">
+                    <div class="card-header">
+                        <h5 class="mb-0">Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Subtotal:</span>
+                            <strong>@_sale.SubTotal.ToString("C")</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Tax:</span>
+                            <strong>@_sale.TaxAmount.ToString("C")</strong>
+                        </div>
+                        <hr />
+                        <div class="d-flex justify-content-between mb-3">
+                            <h5>Total:</h5>
+                            <h5 class="text-primary">@_sale.TotalAmount.ToString("C")</h5>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 mb-2" disabled="@(_isSaving || !_sale.Items.Any())">
+                            @if (_isSaving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                <span>Processing...</span>
+                            }
+                            else
+                            {
+                                <span><i class="bi bi-check-circle"></i> Complete Sale</span>
+                            }
+                        </button>
+                        <a href="/" class="btn btn-secondary w-100">Cancel</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    private CashSaleDto _sale = new();
+    private List<CustomerDto> _customers = new();
+    private List<ProductDto> _products = new();
+    private bool _isSaving;
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await CompanyContext.InitializeAsync();
+            
+            if (CompanyContext.CurrentCompanyId.HasValue)
+            {
+                _customers = await CustomerService.GetCustomersByCompanyIdAsync(CompanyContext.CurrentCompanyId.Value);
+                _products = await ProductService.GetProductsByCompanyIdAsync(CompanyContext.CurrentCompanyId.Value);
+            }
+            else
+            {
+                _errorMessage = "No company selected. Please select a company first.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error loading page: {ex.Message}";
+        }
+    }
+
+    private void AddItem()
+    {
+        _sale.Items.Add(new CashSaleItemDto());
+    }
+
+    private void RemoveItem(int index)
+    {
+        _sale.Items.RemoveAt(index);
+        CalculateTotals();
+    }
+
+    private void OnProductChanged(int index, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var productId) && productId > 0)
+        {
+            var product = _products.FirstOrDefault(p => p.Id == productId);
+            if (product != null)
+            {
+                var item = _sale.Items[index];
+                item.ProductId = productId;
+                item.ProductName = product.Name;
+                item.Description = product.Description;
+                item.UnitPrice = product.SalesPrice;
+                CalculateLineTotal(item);
+            }
+        }
+        CalculateTotals();
+    }
+
+    private void OnQuantityChanged(int index, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var quantity))
+        {
+            _sale.Items[index].Quantity = quantity;
+            CalculateLineTotal(_sale.Items[index]);
+            CalculateTotals();
+        }
+    }
+
+    private void OnPriceChanged(int index, ChangeEventArgs e)
+    {
+        if (decimal.TryParse(e.Value?.ToString(), out var price))
+        {
+            _sale.Items[index].UnitPrice = price;
+            CalculateLineTotal(_sale.Items[index]);
+            CalculateTotals();
+        }
+    }
+
+    private void OnTaxRateChanged(int index, ChangeEventArgs e)
+    {
+        if (decimal.TryParse(e.Value?.ToString(), out var taxRate))
+        {
+            _sale.Items[index].TaxRate = taxRate;
+            CalculateLineTotal(_sale.Items[index]);
+            CalculateTotals();
+        }
+    }
+
+    private void CalculateLineTotal(CashSaleItemDto item)
+    {
+        var subtotal = item.Quantity * item.UnitPrice;
+        item.TaxAmount = subtotal * (item.TaxRate / 100);
+        item.LineTotal = subtotal + item.TaxAmount;
+    }
+
+    private void CalculateTotals()
+    {
+        _sale.SubTotal = _sale.Items.Sum(i => i.Quantity * i.UnitPrice);
+        _sale.TaxAmount = _sale.Items.Sum(i => i.TaxAmount);
+        _sale.TotalAmount = _sale.SubTotal + _sale.TaxAmount;
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (!CompanyContext.CurrentCompanyId.HasValue)
+        {
+            _errorMessage = "No company selected";
+            return;
+        }
+
+        if (!_sale.Items.Any())
+        {
+            _errorMessage = "Please add at least one item";
+            return;
+        }
+
+        _isSaving = true;
+        _errorMessage = null;
+
+        try
+        {
+            var payment = await PaymentService.CreateCashSaleAsync(_sale, CompanyContext.CurrentCompanyId.Value);
+            // Navigate to print receipt page
+            Navigation.NavigateTo($"/payments/receipt/print/{payment.Id}");
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error processing cash sale: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}

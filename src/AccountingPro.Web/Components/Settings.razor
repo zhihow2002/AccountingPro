@@ -1,0 +1,194 @@
+@page "/settings"
+@using AccountingPro.Application.Services
+@using AccountingPro.Core.Entities
+@inject ICompanyContextService CompanyContext
+@inject ICompanyService CompanyService
+
+<PageTitle>Settings - AccountingPro</PageTitle>
+
+<section class="settings">
+    <header class="settings__header">
+        <div>
+            <h1>General Settings</h1>
+            <p class="text-muted mb-0">Manage organization-wide preferences for invoicing and reporting.</p>
+        </div>
+        <div class="current-company">
+            <span class="label">Current Company</span>
+            <span class="value">@(_company?.Name ?? "Not selected")</span>
+        </div>
+    </header>
+
+    @if (!string.IsNullOrEmpty(_statusMessage))
+    {
+        <div class="alert alert-success" role="status">@_statusMessage</div>
+    }
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger" role="alert">@_errorMessage</div>
+    }
+
+    <EditForm Model="_settingsModel" OnValidSubmit="SaveSettings">
+        <div class="card setting-card">
+            <div class="card-body">
+                <h2 class="card-title h5">Invoicing</h2>
+                <div class="form-check form-switch">
+                    <InputCheckbox @bind-Value="_settingsModel.EnableInvoiceTax" class="form-check-input" id="enableTax" />
+                    <label class="form-check-label" for="enableTax">
+                        Apply tax to invoices by default
+                    </label>
+                </div>
+                <small class="text-muted">
+                    When disabled, new invoices will not calculate tax even if tax rates are entered on line items.
+                </small>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button type="submit" class="btn btn-primary" disabled="@(_isSaving || _company is null)">
+                @_isSaving ? "Saving..." : "Save Changes"
+            </button>
+        </div>
+    </EditForm>
+</section>
+
+@code {
+    private Company? _company;
+    private readonly CompanySettingsModel _settingsModel = new();
+    private bool _isSaving;
+    private string? _statusMessage;
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CompanyContext.InitializeAsync();
+
+        if (CompanyContext.CurrentCompanyId is null)
+        {
+            _errorMessage = "No active company selected. Please ensure a company is configured.";
+            return;
+        }
+
+        await LoadCompanyAsync(CompanyContext.CurrentCompanyId.Value);
+    }
+
+    private async Task LoadCompanyAsync(int companyId)
+    {
+        _company = await CompanyService.GetCompanyByIdAsync(companyId);
+
+        if (_company is null)
+        {
+            _errorMessage = "Unable to load company details.";
+            return;
+        }
+
+    _settingsModel.EnableInvoiceTax = _company.EnableInvoiceTax;
+    }
+
+    private async Task SaveSettings()
+    {
+        if (_company is null)
+        {
+            return;
+        }
+
+        _isSaving = true;
+        _statusMessage = null;
+        _errorMessage = null;
+
+        try
+        {
+            _company.EnableInvoiceTax = _settingsModel.EnableInvoiceTax;
+            _company.UpdatedAt = DateTime.UtcNow;
+            _company.UpdatedBy = "System"; // TODO: replace with authenticated user when available
+
+            await CompanyService.UpdateCompanyAsync(_company);
+            await CompanyContext.SetCurrentCompanyAsync(_company.Id);
+
+            _statusMessage = "Settings saved successfully.";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Failed to save settings. Please try again.";
+            Console.WriteLine($"Error saving settings: {ex.Message}");
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private sealed class CompanySettingsModel
+    {
+        public bool EnableInvoiceTax { get; set; } = true;
+    }
+}
+
+<style>
+    .settings {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        padding: 1rem 0;
+        max-width: 720px;
+    }
+
+    .settings__header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .current-company {
+        padding: 0.75rem 1rem;
+        border-radius: 0.75rem;
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+    }
+
+    .current-company .label {
+        display: block;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        color: #6c757d;
+        letter-spacing: 0.08em;
+    }
+
+    .current-company .value {
+        font-weight: 600;
+        font-size: 1rem;
+        color: #212529;
+    }
+
+    .setting-card {
+        border-radius: 1rem;
+        border: 1px solid #e9ecef;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    .actions {
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    @@media (max-width: 576px) {
+        .settings {
+            padding: 0.5rem 0;
+        }
+
+        .settings__header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .actions {
+            width: 100%;
+        }
+
+        .actions .btn {
+            width: 100%;
+        }
+    }
+</style>

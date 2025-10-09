@@ -28,6 +28,7 @@ public class Company : BaseEntity
     public string TaxId { get; set; } = string.Empty;
 
     public bool IsActive { get; set; } = true;
+    public bool EnableInvoiceTax { get; set; } = true;
 
     // Navigation properties
     public virtual ICollection<Account> Accounts { get; set; } = new List<Account>();

@@ -105,6 +105,13 @@
 
                     <div class="form-group">
                         <div class="form-check">
+                            <InputCheckbox id="enableInvoiceTax" @bind-Value="CompanyModel.EnableInvoiceTax" class="form-check-input" />
+                            <label for="enableInvoiceTax" class="form-check-label">Enable invoice tax calculation</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="form-check">
                             <InputCheckbox id="isActive" @bind-Value="CompanyModel.IsActive" class="form-check-input" />
                             <label for="isActive" class="form-check-label">Active</label>
                         </div>
@@ -168,6 +175,7 @@
         catch (Exception ex)
         {
             ErrorMessage = "An error occurred while saving the company. Please try again.";
+            Console.Error.WriteLine(ex);
         }
         finally
         {
@@ -187,7 +195,8 @@
                 Name = company.Name,
                 Address = company.Address,
                 TaxId = company.TaxId,
-                IsActive = company.IsActive
+                IsActive = company.IsActive,
+                EnableInvoiceTax = company.EnableInvoiceTax
             };
             IsEditing = true;
         }
@@ -209,7 +218,11 @@
 
     private void ResetForm()
     {
-        CompanyModel = new Company();
+        CompanyModel = new Company
+        {
+            IsActive = true,
+            EnableInvoiceTax = true
+        };
         IsEditing = false;
         ErrorMessage = string.Empty;
     }

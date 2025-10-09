@@ -1,158 +1,204 @@
 @page "/suppliers"
 @using AccountingPro.Application.DTOs
 @using AccountingPro.Core.Enums
+@using AccountingPro.Application.Services
+@inject ICountryService CountryService
 
-<div class="page-header">
-    <h1 class="page-title">Supplier Management</h1>
+<PageTitle>Suppliers - AccountingPro</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Supplier Management</h1>
     <button class="btn btn-primary" @onclick="OpenCreateModal">
         <i class="fas fa-plus"></i> Add Supplier
     </button>
 </div>
 
-<div class="card">
-    <div class="search-bar">
-        <input type="text" @bind="searchText" @oninput="FilterSuppliers" placeholder="Search suppliers..." class="search-input" />
-        <select @bind="selectedStatus"  class="filter-select">
-            <option value="">All Statuses</option>
+<div class="row mb-3">
+    <div class="col-md-4">
+        <input type="text" class="form-control" placeholder="Search suppliers..." @bind="searchText" @oninput="FilterSuppliers" />
+    </div>
+    <div class="col-md-2">
+        <select class="form-control" @bind="selectedStatus">
+            <option value="">All Status</option>
             <option value="Active">Active</option>
             <option value="Inactive">Inactive</option>
             <option value="Suspended">Suspended</option>
         </select>
     </div>
+</div>
 
-    <div class="table-container">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Company Name</th>
-                    <th>Contact Person</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th>City</th>
-                    <th>Outstanding Balance</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Company Name</th>
+                <th>Contact Person</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>City</th>
+                <th>Outstanding Balance</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (filteredSuppliers.Any())
+            {
                 @foreach (var supplier in filteredSuppliers)
                 {
                     <tr>
-                        <td class="font-semibold">@supplier.CompanyName</td>
+                        <td>@supplier.CompanyName</td>
                         <td>@supplier.ContactPerson</td>
                         <td>@supplier.Email</td>
                         <td>@supplier.Phone</td>
                         <td>@supplier.City</td>
-                        <td class="text-right">
-                            <span class="@(supplier.OutstandingBalance > 0 ? "amount-negative" : "amount-positive")">
-                                $@supplier.OutstandingBalance.ToString("N2")
+                        <td>
+                            <span class="@(supplier.OutstandingBalance > 0 ? "text-warning" : "text-success")">
+                                @supplier.OutstandingBalance.ToString("C")
                             </span>
                         </td>
                         <td>
-                            <span class="status-badge @GetStatusClass(supplier.Status)">
+                            <span class="badge badge-@GetStatusClass(supplier.Status)">
                                 @supplier.Status
                             </span>
                         </td>
                         <td>
-                            <div class="action-buttons">
-                                <button class="btn btn-sm btn-outline-primary" @onclick="() => EditSupplier(supplier)" title="Edit">
+                            <div class="btn-group" role="group" aria-label="Supplier actions">
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => EditSupplier(supplier)" title="Edit Supplier">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteSupplier(supplier.Id)" title="Delete">
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteSupplier(supplier.Id)" title="Delete Supplier">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
                         </td>
                     </tr>
                 }
-            </tbody>
-        </table>
-        
-        @if (!filteredSuppliers.Any())
-        {
-            <div class="empty-state">
-                <div class="empty-icon">📦</div>
-                <p class="empty-message">No suppliers found</p>
-                <p class="empty-description">Add your first supplier to get started</p>
-            </div>
-        }
-    </div>
+            }
+            else
+            {
+                <tr>
+                    <td colspan="8" class="text-center text-muted">No suppliers found</td>
+                </tr>
+            }
+        </tbody>
+    </table>
 </div>
 
+<!-- Create/Edit Supplier Modal -->
 @if (showModal)
 {
-    <div class="modal-overlay" @onclick="CloseModal">
-        <div class="modal" @onclick:stopPropagation="true">
-            <div class="modal-header">
-                <h2>@(isEditing ? "Edit" : "Add") Supplier</h2>
-                <button class="modal-close" @onclick="CloseModal">×</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label>Company Name *</label>
-                        <input type="text" @bind="currentSupplier.CompanyName" class="form-input" required />
+    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(isEditing ? "Edit Supplier" : "Add New Supplier")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Company Name *</label>
+                                <input type="text" class="form-control" @bind="currentSupplier.CompanyName" required />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Contact Person</label>
+                                <input type="text" class="form-control" @bind="currentSupplier.ContactPerson" />
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Contact Person</label>
-                        <input type="text" @bind="currentSupplier.ContactPerson" class="form-input" />
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" @bind="currentSupplier.Email" />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Phone</label>
+                                <input type="text" class="form-control" @bind="currentSupplier.Phone" />
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Email</label>
-                        <input type="email" @bind="currentSupplier.Email" class="form-input" />
+                    <div class="mb-3">
+                        <label class="form-label">Address</label>
+                        <input type="text" class="form-control" @bind="currentSupplier.Address" />
                     </div>
-                    <div class="form-group">
-                        <label>Phone</label>
-                        <input type="text" @bind="currentSupplier.Phone" class="form-input" />
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">City</label>
+                                <input type="text" class="form-control" @bind="currentSupplier.City" />
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">State</label>
+                                <input type="text" class="form-control" @bind="currentSupplier.State" />
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Zip Code</label>
+                                <input type="text" class="form-control" @bind="currentSupplier.ZipCode" />
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Address</label>
-                        <input type="text" @bind="currentSupplier.Address" class="form-input" />
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Country</label>
+                                <select class="form-control" @bind="currentSupplier.Country">
+                                    <option value="">Select a country...</option>
+                                    @foreach (var country in countries)
+                                    {
+                                        <option value="@country.Code">@country.Name</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Tax ID</label>
+                                <input type="text" class="form-control" @bind="currentSupplier.TaxId" />
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>City</label>
-                        <input type="text" @bind="currentSupplier.City" class="form-input" />
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Payment Terms</label>
+                                <select class="form-control" @bind="currentSupplier.PaymentTerms">
+                                    <option value="Net30">Net 30</option>
+                                    <option value="Net15">Net 15</option>
+                                    <option value="Net60">Net 60</option>
+                                    <option value="COD">Cash on Delivery</option>
+                                    <option value="Prepaid">Prepaid</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Status</label>
+                                <select class="form-control" @bind="currentSupplier.Status">
+                                    <option value="@SupplierStatus.Active">Active</option>
+                                    <option value="@SupplierStatus.Inactive">Inactive</option>
+                                    <option value="@SupplierStatus.Suspended">Suspended</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>State</label>
-                        <input type="text" @bind="currentSupplier.State" class="form-input" />
-                    </div>
-                    <div class="form-group">
-                        <label>ZIP Code</label>
-                        <input type="text" @bind="currentSupplier.ZipCode" class="form-input" />
-                    </div>
-                    <div class="form-group">
-                        <label>Country</label>
-                        <input type="text" @bind="currentSupplier.Country" class="form-input" />
-                    </div>
-                    <div class="form-group">
-                        <label>Tax ID</label>
-                        <input type="text" @bind="currentSupplier.TaxId" class="form-input" />
-                    </div>
-                    <div class="form-group">
-                        <label>Payment Terms</label>
-                        <select @bind="currentSupplier.PaymentTerms" class="form-input">
-                            <option value="Net30">Net 30</option>
-                            <option value="Net15">Net 15</option>
-                            <option value="Net60">Net 60</option>
-                            <option value="COD">Cash on Delivery</option>
-                            <option value="Prepaid">Prepaid</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Status</label>
-                        <select @bind="currentSupplier.Status" class="form-input">
-                            <option value="Active">Active</option>
-                            <option value="Inactive">Inactive</option>
-                        </select>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                        <button type="button" class="btn btn-primary" @onclick="SaveSupplier" disabled="@string.IsNullOrWhiteSpace(currentSupplier.CompanyName)">
+                            Save Supplier
+                        </button>
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
-                <button class="btn btn-primary" @onclick="SaveSupplier" disabled="@string.IsNullOrWhiteSpace(currentSupplier.CompanyName)">
-                    @(isEditing ? "Update" : "Save") Supplier
-                </button>
             </div>
         </div>
     </div>
@@ -161,6 +207,7 @@
 @code {
     private List<SupplierDto> suppliers = new();
     private List<SupplierDto> filteredSuppliers = new();
+    private List<CountryDto> countries = new();
     private SupplierDto currentSupplier = new();
     private bool showModal = false;
     private bool isEditing = false;
@@ -169,6 +216,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadCountries();
         // Initialize with sample data
         suppliers = new List<SupplierDto>
         {
@@ -258,6 +306,19 @@
         showModal = true;
     }
 
+    private async Task LoadCountries()
+    {
+        try
+        {
+            countries = await CountryService.GetAllCountriesAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading countries: {ex.Message}");
+            countries = new List<CountryDto>();
+        }
+    }
+
     private void CloseModal()
     {
         showModal = false;
@@ -319,10 +380,10 @@
     {
         return status switch
         {
-            SupplierStatus.Active => "status-active",
-            SupplierStatus.Inactive => "status-inactive",
-            SupplierStatus.Suspended => "status-suspended",
-            _ => "status-pending"
+            SupplierStatus.Active => "success",
+            SupplierStatus.Inactive => "secondary",
+            SupplierStatus.Suspended => "danger",
+            _ => "warning"
         };
     }
 }

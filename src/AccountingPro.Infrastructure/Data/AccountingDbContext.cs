@@ -18,8 +18,12 @@ public class AccountingDbContext : DbContext
     public DbSet<AccountingPeriod> AccountingPeriods { get; set; } = null!;
     public DbSet<Customer> Customers { get; set; } = null!;
     public DbSet<Invoice> Invoices { get; set; } = null!;
+    public DbSet<InvoiceItem> InvoiceItems { get; set; } = null!;
+    public DbSet<Supplier> Suppliers { get; set; } = null!;
     public DbSet<Bill> Bills { get; set; } = null!;
     public DbSet<Product> Products { get; set; } = null!;
+    public DbSet<Payment> Payments { get; set; } = null!;
+    public DbSet<Country> Countries { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -150,7 +154,7 @@ public class AccountingDbContext : DbContext
 
             entity
                 .HasOne(e => e.Company)
-                .WithMany()
+                .WithMany(c => c.Customers)
                 .HasForeignKey(e => e.CompanyId)
                 .OnDelete(DeleteBehavior.Restrict);
 
@@ -171,7 +175,7 @@ public class AccountingDbContext : DbContext
 
             entity
                 .HasOne(e => e.Company)
-                .WithMany()
+                .WithMany(c => c.Invoices)
                 .HasForeignKey(e => e.CompanyId)
                 .OnDelete(DeleteBehavior.Restrict);
 
@@ -198,7 +202,7 @@ public class AccountingDbContext : DbContext
 
             entity
                 .HasOne(e => e.Company)
-                .WithMany()
+                .WithMany(c => c.Bills)
                 .HasForeignKey(e => e.CompanyId)
                 .OnDelete(DeleteBehavior.Restrict);
 
@@ -223,7 +227,7 @@ public class AccountingDbContext : DbContext
 
             entity
                 .HasOne(e => e.Company)
-                .WithMany()
+                .WithMany(c => c.Products)
                 .HasForeignKey(e => e.CompanyId)
                 .OnDelete(DeleteBehavior.Restrict);
 
@@ -242,7 +246,7 @@ public class AccountingDbContext : DbContext
 
             entity
                 .HasOne(e => e.Company)
-                .WithMany()
+                .WithMany(c => c.Suppliers)
                 .HasForeignKey(e => e.CompanyId)
                 .OnDelete(DeleteBehavior.Restrict);
 
@@ -258,7 +262,7 @@ public class AccountingDbContext : DbContext
 
             entity
                 .HasOne(e => e.Company)
-                .WithMany()
+                .WithMany(c => c.Payments)
                 .HasForeignKey(e => e.CompanyId)
                 .OnDelete(DeleteBehavior.Restrict);
 
@@ -275,7 +279,7 @@ public class AccountingDbContext : DbContext
 
             entity
                 .HasOne(e => e.Company)
-                .WithMany()
+                .WithMany(c => c.Taxes)
                 .HasForeignKey(e => e.CompanyId)
                 .OnDelete(DeleteBehavior.Restrict);
 
@@ -320,6 +324,22 @@ public class AccountingDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
+        // Country configuration
+        modelBuilder.Entity<Country>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Code).IsRequired().HasMaxLength(2);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Code3).HasMaxLength(3);
+            entity.Property(e => e.NumericCode).HasMaxLength(3);
+            entity.Property(e => e.PhoneCode).HasMaxLength(10);
+            entity.Property(e => e.Currency).HasMaxLength(3);
+            entity.Property(e => e.CurrencySymbol).HasMaxLength(5);
+
+            entity.HasIndex(e => e.Code).IsUnique();
+            entity.HasIndex(e => e.Name);
+        });
+
         // Seed data for account types
         SeedData(modelBuilder);
     }
@@ -340,6 +360,7 @@ public class AccountingDbContext : DbContext
                     Email = "info@samplecompany.com",
                     TaxId = "12-3456789",
                     IsActive = true,
+                    EnableInvoiceTax = true,
                     CreatedAt = DateTime.UtcNow,
                     CreatedBy = SYSTEM_USER
                 }
@@ -605,5 +626,8 @@ public class AccountingDbContext : DbContext
                     CreatedBy = SYSTEM_USER
                 }
             );
+
+        // Seed countries
+        modelBuilder.Entity<Country>().HasData(CountrySeedData.GetCountries());
     }
 }

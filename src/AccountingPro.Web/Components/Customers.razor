@@ -3,6 +3,7 @@
 @using AccountingPro.Core.Enums
 @using AccountingPro.Application.Services
 @inject ICustomerService CustomerService
+@inject ICountryService CountryService
 @inject NavigationManager Navigation
 
 <PageTitle>Customers - AccountingPro</PageTitle>
@@ -165,7 +166,13 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">Country</label>
-                                    <InputText class="form-control" @bind-Value="customerForm.Country" />
+                                    <select class="form-control" @bind="customerForm.Country">
+                                        <option value="">Select a country...</option>
+                                        @foreach (var country in countries)
+                                        {
+                                            <option value="@country.Code">@country.Name</option>
+                                        }
+                                    </select>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -193,6 +200,7 @@
 @code {
     private List<CustomerDto> customers = new();
     private List<CustomerDto> filteredCustomers = new();
+    private List<CountryDto> countries = new();
     private string searchTerm = "";
     private string selectedStatus = "";
     private bool showModal = false;
@@ -203,6 +211,20 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadCustomers();
+        await LoadCountries();
+    }
+
+    private async Task LoadCountries()
+    {
+        try
+        {
+            countries = await CountryService.GetAllCountriesAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading countries: {ex.Message}");
+            countries = new List<CountryDto>();
+        }
     }
 
     private async Task LoadCustomers()
