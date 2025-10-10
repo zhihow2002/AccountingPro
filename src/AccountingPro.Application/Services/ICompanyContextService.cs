@@ -14,6 +14,9 @@ public interface ICompanyContextService
 
 public class CompanyContextService : ICompanyContextService
 {
+    // Static storage to persist company selection across page refreshes
+    private static int? _staticCurrentCompanyId;
+
     private int? _currentCompanyId;
     private Company? _currentCompany;
     private readonly ICompanyService _companyService;
@@ -23,6 +26,8 @@ public class CompanyContextService : ICompanyContextService
     public CompanyContextService(ICompanyService companyService)
     {
         _companyService = companyService;
+        // Initialize from static storage
+        _currentCompanyId = _staticCurrentCompanyId;
     }
 
     public int? CurrentCompanyId => _currentCompanyId;
@@ -55,12 +60,14 @@ public class CompanyContextService : ICompanyContextService
     public async Task SetCurrentCompanyAsync(int companyId)
     {
         _currentCompanyId = companyId;
+        _staticCurrentCompanyId = companyId; // Persist to static storage
         _currentCompany = await _companyService.GetCompanyByIdAsync(companyId);
     }
 
     public Task ClearCurrentCompanyAsync()
     {
         _currentCompanyId = null;
+        _staticCurrentCompanyId = null; // Clear from static storage
         _currentCompany = null;
         _isInitialized = false;
         return Task.CompletedTask;
@@ -77,6 +84,17 @@ public class CompanyContextService : ICompanyContextService
     {
         try
         {
+            // If we have a persisted company ID, use it
+            if (_staticCurrentCompanyId.HasValue)
+            {
+                _currentCompanyId = _staticCurrentCompanyId.Value;
+                _currentCompany = await _companyService.GetCompanyByIdAsync(
+                    _staticCurrentCompanyId.Value
+                );
+                return;
+            }
+
+            // Otherwise, load the default company
             var companies = await _companyService.GetAllCompaniesAsync();
 
             var defaultCompany = companies.FirstOrDefault(c => c.IsActive);
@@ -88,6 +106,7 @@ public class CompanyContextService : ICompanyContextService
             if (defaultCompany != null)
             {
                 _currentCompanyId = defaultCompany.Id;
+                _staticCurrentCompanyId = defaultCompany.Id; // Persist the initial selection
                 _currentCompany = defaultCompany;
             }
         }
