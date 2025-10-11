@@ -13,6 +13,51 @@
     </button>
 </div>
 
+<!-- Supplier Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon invoices">🏢</div>
+            <div class="stat-content">
+                <h3>@suppliers.Count</h3>
+                <p>Total Suppliers</p>
+                <small>All time</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon revenue">✅</div>
+            <div class="stat-content">
+                <h3>@suppliers.Count(s => s.Status == "Active")</h3>
+                <p>Active Suppliers</p>
+                <small>Currently active</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon profit">💰</div>
+            <div class="stat-content">
+                <h3>@suppliers.Sum(s => s.OutstandingBalance).ToString("C")</h3>
+                <p>Outstanding Balance</p>
+                <small>Total payables</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon expenses">📊</div>
+            <div class="stat-content">
+                <h3>@suppliers.Count(s => s.OutstandingBalance > 0)</h3>
+                <p>With Balance</p>
+                <small>Pending payments</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
 <div class="row mb-3">
     <div class="col-md-4">
         <input type="text" class="form-control" placeholder="Search suppliers..." @bind="searchText" @oninput="FilterSuppliers" />
@@ -47,7 +92,7 @@
                 @foreach (var supplier in filteredSuppliers)
                 {
                     <tr>
-                        <td>@supplier.CompanyName</td>
+                        <td><strong>@supplier.CompanyName</strong></td>
                         <td>@supplier.ContactPerson</td>
                         <td>@supplier.Email</td>
                         <td>@supplier.Phone</td>
@@ -63,11 +108,11 @@
                             </span>
                         </td>
                         <td>
-                            <div class="btn-group" role="group" aria-label="Supplier actions">
-                                <button class="btn btn-sm btn-outline-primary" @onclick="() => EditSupplier(supplier)" title="Edit Supplier">
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => EditSupplier(supplier)" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteSupplier(supplier.Id)" title="Delete Supplier">
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteSupplier(supplier.Id)" title="Delete">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
@@ -78,7 +123,13 @@
             else
             {
                 <tr>
-                    <td colspan="8" class="text-center text-muted">No suppliers found</td>
+                    <td colspan="8" class="text-center text-muted">
+                        <div class="py-4">
+                            <i class="fas fa-truck" style="font-size: 2rem; opacity: 0.3;"></i>
+                            <p class="mt-2">No suppliers found</p>
+                            <button class="btn btn-primary" @onclick="OpenCreateModal">Add Your First Supplier</button>
+                        </div>
+                    </td>
                 </tr>
             }
         </tbody>

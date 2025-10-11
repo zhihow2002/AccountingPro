@@ -15,6 +15,51 @@
     </button>
 </div>
 
+<!-- Customer Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon invoices">👥</div>
+            <div class="stat-content">
+                <h3>@customers.Count</h3>
+                <p>Total Customers</p>
+                <small>All time</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon revenue">✅</div>
+            <div class="stat-content">
+                <h3>@customers.Count(c => c.Status == CustomerStatus.Active)</h3>
+                <p>Active Customers</p>
+                <small>Currently active</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon profit">💰</div>
+            <div class="stat-content">
+                <h3>@customers.Sum(c => c.OutstandingBalance).ToString("C")</h3>
+                <p>Outstanding Balance</p>
+                <small>Total receivables</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon expenses">⚠️</div>
+            <div class="stat-content">
+                <h3>@customers.Count(c => c.OutstandingBalance > c.CreditLimit)</h3>
+                <p>Over Credit Limit</p>
+                <small class="text-danger">Needs attention</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
 <div class="row mb-3">
     <div class="col-md-4">
         <input type="text" class="form-control" placeholder="Search customers..." @bind="searchTerm" @oninput="FilterCustomers" />
@@ -49,7 +94,7 @@
                 @foreach (var customer in filteredCustomers)
                 {
                     <tr>
-                        <td>@customer.Name</td>
+                        <td><strong>@customer.Name</strong></td>
                         <td>@customer.Email</td>
                         <td>@customer.Phone</td>
                         <td>@customer.City</td>
@@ -65,8 +110,8 @@
                             </span>
                         </td>
                         <td>
-                            <div class="btn-group" role="group" aria-label="Customer actions">
-                                <button class="btn btn-sm btn-outline-primary" @onclick="() => EditCustomer(customer)" title="Edit Customer">
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => EditCustomer(customer)" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </button>
                                 <button class="btn btn-sm btn-outline-success" @onclick="() => CreateInvoice(customer.Id)" title="Create Invoice">
@@ -83,7 +128,13 @@
             else
             {
                 <tr>
-                    <td colspan="8" class="text-center text-muted">No customers found</td>
+                    <td colspan="8" class="text-center text-muted">
+                        <div class="py-4">
+                            <i class="fas fa-users" style="font-size: 2rem; opacity: 0.3;"></i>
+                            <p class="mt-2">No customers found</p>
+                            <button class="btn btn-primary" @onclick="ShowCreateModal">Add Your First Customer</button>
+                        </div>
+                    </td>
                 </tr>
             }
         </tbody>

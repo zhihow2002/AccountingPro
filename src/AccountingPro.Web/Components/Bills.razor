@@ -2,17 +2,66 @@
 @using AccountingPro.Application.DTOs
 @using AccountingPro.Core.Enums
 
-<div class="page-header">
-    <h1 class="page-title">Bills Management</h1>
+<PageTitle>Bills - AccountingPro</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Bills Management</h1>
     <button class="btn btn-primary" @onclick="OpenCreateModal">
         <i class="fas fa-plus"></i> Create Bill
     </button>
 </div>
 
-<div class="card">
-    <div class="search-bar">
-        <input type="text" @bind="searchText" @oninput="FilterBills" placeholder="Search bills..." class="search-input" />
-        <select @bind="selectedStatus" class="filter-select" @oninput="FilterBills">
+<!-- Bills Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon invoices">📄</div>
+            <div class="stat-content">
+                <h3>@bills.Count</h3>
+                <p>Total Bills</p>
+                <small>All time</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon revenue">💰</div>
+            <div class="stat-content">
+                <h3>@bills.Sum(b => b.TotalAmount).ToString("C")</h3>
+                <p>Total Amount</p>
+                <small>All bills</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon profit">✅</div>
+            <div class="stat-content">
+                <h3>@bills.Where(b => b.Status == BillStatus.Paid).Sum(b => b.TotalAmount).ToString("C")</h3>
+                <p>Paid Amount</p>
+                <small>Completed payments</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon expenses">⏰</div>
+            <div class="stat-content">
+                <h3>@bills.Sum(b => b.OutstandingAmount).ToString("C")</h3>
+                <p>Outstanding</p>
+                <small class="text-warning">Pending payment</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="row mb-3">
+    <div class="col-md-4">
+        <input type="text" @bind="searchText" @oninput="FilterBills" placeholder="Search bills..." class="form-control" />
+    </div>
+    <div class="col-md-2">
+        <select @bind="selectedStatus" class="form-control" @oninput="FilterBills">
             <option value="">All Statuses</option>
             <option value="@BillStatus.Draft">Draft</option>
             <option value="@BillStatus.Received">Received</option>
@@ -20,44 +69,49 @@
             <option value="@BillStatus.Overdue">Overdue</option>
         </select>
     </div>
+</div>
 
-    <div class="table-container">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Bill #</th>
-                    <th>Supplier</th>
-                    <th>Date</th>
-                    <th>Due Date</th>
-                    <th>Amount</th>
-                    <th>Outstanding</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Bill #</th>
+                <th>Supplier</th>
+                <th>Date</th>
+                <th>Due Date</th>
+                <th>Amount</th>
+                <th>Outstanding</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (filteredBills.Any())
+            {
                 @foreach (var bill in filteredBills)
                 {
                     <tr>
-                        <td class="font-semibold">@bill.BillNumber</td>
+                        <td><strong>@bill.BillNumber</strong></td>
                         <td>@bill.SupplierName</td>
-                        <td>@bill.BillDate.ToString("MM/dd/yyyy")</td>
-                                <td class="@(bill.DueDate < DateTime.Now && bill.Status != BillStatus.Paid ? "text-danger" : "")">`
-                            @bill.DueDate.ToString("MM/dd/yyyy")
+                        <td>@bill.BillDate.ToString("MMM dd, yyyy")</td>
+                        <td>
+                            <span class="@(bill.DueDate < DateTime.Now && bill.Status != BillStatus.Paid ? "text-danger" : "")">
+                                @bill.DueDate.ToString("MMM dd, yyyy")
+                            </span>
                         </td>
-                        <td class="text-right">$@bill.TotalAmount.ToString("N2")</td>
-                        <td class="text-right">
-                            <span class="@(bill.OutstandingAmount > 0 ? "amount-negative" : "amount-positive")">
-                                $@bill.OutstandingAmount.ToString("N2")
+                        <td>@bill.TotalAmount.ToString("C")</td>
+                        <td>
+                            <span class="@(bill.OutstandingAmount > 0 ? "text-warning" : "text-success")">
+                                @bill.OutstandingAmount.ToString("C")
                             </span>
                         </td>
                         <td>
-                            <span class="status-badge @GetStatusClass(bill.Status)">
+                            <span class="badge badge-@GetStatusClass(bill.Status)">
                                 @bill.Status
                             </span>
                         </td>
                         <td>
-                            <div class="action-buttons">
+                            <div class="btn-group" role="group">
                                 <button class="btn btn-sm btn-outline-primary" @onclick="() => EditBill(bill)" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </button>
@@ -74,18 +128,21 @@
                         </td>
                     </tr>
                 }
-            </tbody>
-        </table>
-        
-        @if (!filteredBills.Any())
-        {
-            <div class="empty-state">
-                <div class="empty-icon">📄</div>
-                <p class="empty-message">No bills found</p>
-                <p class="empty-description">Create your first bill to get started</p>
-            </div>
-        }
-    </div>
+            }
+            else
+            {
+                <tr>
+                    <td colspan="8" class="text-center text-muted">
+                        <div class="py-4">
+                            <i class="fas fa-file-invoice" style="font-size: 2rem; opacity: 0.3;"></i>
+                            <p class="mt-2">No bills found</p>
+                            <button class="btn btn-primary" @onclick="OpenCreateModal">Create Your First Bill</button>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
 </div>
 
 @if (showModal)

@@ -5,62 +5,88 @@
 @inject ICompanyContextService CompanyContext
 @inject NavigationManager Navigation
 
-<PageTitle>Payments - AccountingPro</PageTitle>
+<PageTitle>Receipts - AccountingPro</PageTitle>
 
-<div class="container-fluid">
-    <div class="row mb-3">
-        <div class="col">
-            <h2>Payments & Receipts</h2>
-        </div>
-        <div class="col-auto">
-            <a href="/payments/receipt/create" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> New Receipt
-            </a>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Receipts Management</h1>
+    <a href="/payments/receipt/create" class="btn btn-primary">
+        <i class="fas fa-plus"></i> New Receipt
+    </a>
+</div>
+
+<!-- Receipts Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon invoices">💵</div>
+            <div class="stat-content">
+                <h3>@_payments.Count</h3>
+                <p>Total Receipts</p>
+                <small>All time</small>
+            </div>
         </div>
     </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon revenue">💰</div>
+            <div class="stat-content">
+                <h3>@_payments.Sum(p => p.Amount).ToString("C")</h3>
+                <p>Total Amount</p>
+                <small>All receipts</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon profit">📅</div>
+            <div class="stat-content">
+                <h3>@_payments.Where(p => p.PaymentDate.Month == DateTime.Now.Month).Sum(p => p.Amount).ToString("C")</h3>
+                <p>This Month</p>
+                <small>Current month receipts</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon expenses">✅</div>
+            <div class="stat-content">
+                <h3>@_payments.Count(p => p.Status == Core.Enums.PaymentStatus.Completed)</h3>
+                <p>Completed</p>
+                <small class="text-success">Successful payments</small>
+            </div>
+        </div>
+    </div>
+</div>
 
-    @if (_isLoading)
-    {
-        <div class="text-center py-5">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
+@if (_isLoading)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
         </div>
-    }
-    else if (!_payments.Any())
-    {
-        <div class="card">
-            <div class="card-body text-center py-5">
-                <i class="bi bi-receipt" style="font-size: 3rem; color: #ccc;"></i>
-                <h5 class="mt-3">No payments recorded</h5>
-                <p class="text-muted">Start by creating a payment receipt</p>
-                <a href="/payments/receipt/create" class="btn btn-primary">
-                    Create Payment Receipt
-                </a>
-            </div>
-        </div>
-    }
-    else
-    {
-        <div class="card">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Payment #</th>
-                                <th>Customer</th>
-                                <th>Invoice #</th>
-                                <th>Method</th>
-                                <th>Amount</th>
-                                <th>Status</th>
-                                <th>Reference</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var payment in _payments)
+    </div>
+}
+else if (!_payments.Any())
+{
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Payment #</th>
+                    <th>Customer</th>
+                    <th>Invoice #</th>
+                    <th>Method</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Reference</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (_payments.Any())
+                {
+                    @foreach (var payment in _payments)
                             {
                                 <tr>
                                     <td>@payment.PaymentDate.ToString("yyyy-MM-dd")</td>
@@ -94,23 +120,41 @@
                                     </td>
                                     <td>@payment.Reference</td>
                                     <td>
-                                        <a href="/payments/receipt/print/@payment.Id" class="btn btn-sm btn-outline-primary me-1" title="Print Receipt">
-                                            <i class="bi bi-printer"></i>
-                                        </a>
-                                        <button class="btn btn-sm btn-outline-danger" 
-                                                @onclick="() => DeletePayment(payment.Id)"
-                                                title="Delete">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
+                                        <div class="btn-group" role="group">
+                                            <a href="/payments/receipt/print/@payment.Id" class="btn btn-sm btn-outline-info" title="Print">
+                                                <i class="fas fa-print"></i>
+                                            </a>
+                                            <button class="btn btn-sm btn-outline-danger" 
+                                                    @onclick="() => DeletePayment(payment.Id)"
+                                                    title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             }
-                        </tbody>
-                    </table>
-                </div>
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="9" class="text-center text-muted">
+                                    <div class="py-4">
+                                        <i class="fas fa-receipt" style="font-size: 2rem; opacity: 0.3;"></i>
+                                        <p class="mt-2">No receipts found</p>
+                                        <a href="/payments/receipt/create" class="btn btn-primary">Create Your First Receipt</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             </div>
-        </div>
+        }
+    </div>
 
+@* Remove old statistics section as it's now at the top *@
+@if (false)
+{
         <div class="row mt-3">
             <div class="col-md-4">
                 <div class="card">

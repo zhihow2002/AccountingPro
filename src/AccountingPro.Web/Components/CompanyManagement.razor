@@ -29,12 +29,23 @@
                                 @foreach (var company in Companies)
                                 {
                                     <tr>
-                                        <td>@company.Code</td>
-                                        <td>@company.Name</td>
-                                        <td>@company.TaxId</td>
                                         <td>
-                                            <span class="badge @(company.IsActive ? "badge-success" : "badge-secondary")">
-                                                @(company.IsActive ? "Active" : "Inactive")
+                                        @company.Code
+                                        </td>
+                                        <td>
+                                        @company.Name
+                                        </td>
+                                        <td>
+                                        @company.TaxId
+                                        </td>
+                                        <td>
+                                            <span
+                                                class="badge @(company.IsActive ? "
+                                                badge-success
+                                                :
+                                                badge-secondary>
+                                                @
+                                                (company.IsActive ? "Active" : "Inactive")
                                             </span>
                                         </td>
                                         <td>
@@ -61,7 +72,9 @@
     <div class="col-md-4">
         <div class="card">
             <div class="card-header">
-                <h5>@(IsEditing ? "Edit Company" : "Add New Company")</h5>
+                <h5>
+                    @ (IsEditing ? "Edit Company" : "Add New Company")
+                </h5>
             </div>
             <div class="card-body">
                 <EditForm Model="@CompanyModel" OnValidSubmit="@HandleValidSubmit">
@@ -137,7 +150,8 @@
                             type="submit"
                             class="btn btn-primary"
                             disabled="@IsSubmitting">
-                            @(IsSubmitting ? "Saving..." : (IsEditing ? "Update Company" : "Add Company"))
+                            @
+                            (IsSubmitting ? "Saving..." : (IsEditing ? "Update Company" : "Add Company"))
                         </button>
                         @if (IsEditing)
                         {
@@ -154,8 +168,11 @@
         </div>
     </div>
 </div>
-@code {
-    private List<Company> Companies = new();
+@
+code {
+    private List
+<
+Company> Companies = new();
     private Company CompanyModel = new();
     private bool IsEditing = false;
     private bool IsSubmitting = false;
