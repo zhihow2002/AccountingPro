@@ -9,18 +9,19 @@ namespace AccountingPro.Infrastructure.Services;
 
 public class PaymentService : IPaymentService
 {
-    private readonly AccountingDbContext _context;
+    private readonly IDbContextFactory<AccountingDbContext> _contextFactory;
     private readonly IInvoiceService _invoiceService;
 
-    public PaymentService(AccountingDbContext context, IInvoiceService invoiceService)
+    public PaymentService(IDbContextFactory<AccountingDbContext> contextFactory, IInvoiceService invoiceService)
     {
-        _context = context;
+        _contextFactory = contextFactory;
         _invoiceService = invoiceService;
     }
 
     public async Task<List<PaymentDto>> GetPaymentsByCompanyAsync(int companyId)
     {
-        return await _context.Payments
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Payments
             .Include(p => p.Customer)
             .Include(p => p.Invoice)
             .Where(p => p.CompanyId == companyId && !p.IsDeleted)
@@ -46,7 +47,8 @@ public class PaymentService : IPaymentService
 
     public async Task<PaymentDto?> GetPaymentByIdAsync(int id)
     {
-        return await _context.Payments
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Payments
             .Include(p => p.Customer)
             .Include(p => p.Invoice)
             .Where(p => p.Id == id && !p.IsDeleted)
@@ -71,6 +73,8 @@ public class PaymentService : IPaymentService
 
     public async Task<Payment> CreatePaymentAsync(CreatePaymentReceiptDto dto, int companyId)
     {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        
         var payment = new Payment
         {
             PaymentNumber = await GeneratePaymentNumberAsync(companyId),
@@ -88,13 +92,13 @@ public class PaymentService : IPaymentService
             CreatedBy = "System"
         };
 
-        _context.Payments.Add(payment);
-        await _context.SaveChangesAsync();
+        context.Payments.Add(payment);
+        await context.SaveChangesAsync();
 
         // Update invoice if payment is linked
         if (dto.InvoiceId.HasValue)
         {
-            var invoice = await _context.Invoices.FindAsync(dto.InvoiceId.Value);
+            var invoice = await context.Invoices.FindAsync(dto.InvoiceId.Value);
             if (invoice != null)
             {
                 invoice.PaidAmount += dto.Amount;
@@ -111,7 +115,7 @@ public class PaymentService : IPaymentService
 
                 invoice.UpdatedAt = DateTime.UtcNow;
                 invoice.UpdatedBy = "System";
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
             }
         }
 
@@ -120,16 +124,17 @@ public class PaymentService : IPaymentService
 
     public async Task<Payment> CreateCashSaleAsync(CashSaleDto dto, int companyId)
     {
-        var strategy = _context.Database.CreateExecutionStrategy();
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var strategy = context.Database.CreateExecutionStrategy();
         
         return await strategy.ExecuteAsync(async () =>
         {
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            using var transaction = await context.Database.BeginTransactionAsync();
             
             try
             {
                 // Get company config for tax settings
-                var companyConfig = await _context.Companies
+                var companyConfig = await context.Companies
                     .AsNoTracking()
                     .Where(c => c.Id == companyId)
                     .Select(c => new { c.EnableInvoiceTax })
@@ -138,7 +143,7 @@ public class PaymentService : IPaymentService
                 var applyTax = companyConfig?.EnableInvoiceTax ?? true;
 
                 // Generate invoice number
-                var lastInvoice = await _context
+                var lastInvoice = await context
                     .Invoices.Where(i => i.CompanyId == companyId)
                     .OrderByDescending(i => i.Id)
                     .FirstOrDefaultAsync();
@@ -189,8 +194,8 @@ public class PaymentService : IPaymentService
                 invoice.PaidAmount = invoice.TotalAmount; // Fully paid
                 invoice.BalanceAmount = 0; // No balance
 
-                _context.Invoices.Add(invoice);
-                await _context.SaveChangesAsync();
+                context.Invoices.Add(invoice);
+                await context.SaveChangesAsync();
 
                 // Create payment for the invoice
                 var payment = new Payment
@@ -209,8 +214,8 @@ public class PaymentService : IPaymentService
                     CreatedBy = "System"
                 };
 
-                _context.Payments.Add(payment);
-                await _context.SaveChangesAsync();
+                context.Payments.Add(payment);
+                await context.SaveChangesAsync();
 
                 await transaction.CommitAsync();
                 return payment;
@@ -225,7 +230,8 @@ public class PaymentService : IPaymentService
 
     public async Task DeletePaymentAsync(int id)
     {
-        var payment = await _context.Payments.FindAsync(id);
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var payment = await context.Payments.FindAsync(id);
         if (payment != null)
         {
             payment.IsDeleted = true;
@@ -235,7 +241,7 @@ public class PaymentService : IPaymentService
             // Update invoice if payment was linked
             if (payment.InvoiceId.HasValue)
             {
-                var invoice = await _context.Invoices.FindAsync(payment.InvoiceId.Value);
+                var invoice = await context.Invoices.FindAsync(payment.InvoiceId.Value);
                 if (invoice != null)
                 {
                     invoice.PaidAmount -= payment.Amount;
@@ -255,13 +261,14 @@ public class PaymentService : IPaymentService
                 }
             }
 
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
     }
 
     public async Task<string> GeneratePaymentNumberAsync(int companyId)
     {
-        var lastPayment = await _context.Payments
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var lastPayment = await context.Payments
             .Where(p => p.CompanyId == companyId)
             .OrderByDescending(p => p.Id)
             .FirstOrDefaultAsync();

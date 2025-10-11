@@ -9,14 +9,14 @@ namespace AccountingPro.Infrastructure.Services;
 
 public class CustomerService : ICustomerService
 {
-    private readonly AccountingDbContext _context;
+    private readonly IDbContextFactory<AccountingDbContext> _contextFactory;
     private readonly IMapper _mapper;
     private readonly ICompanyContextService _companyContext;
     private const string NoCompanyContextError = "No company context set";
 
-    public CustomerService(AccountingDbContext context, IMapper mapper, ICompanyContextService companyContext)
+    public CustomerService(IDbContextFactory<AccountingDbContext> contextFactory, IMapper mapper, ICompanyContextService companyContext)
     {
-        _context = context;
+        _contextFactory = contextFactory;
         _mapper = mapper;
         _companyContext = companyContext;
     }
@@ -26,7 +26,8 @@ public class CustomerService : ICustomerService
         if (_companyContext.CurrentCompanyId == null)
             throw new InvalidOperationException(NoCompanyContextError);
 
-        var customers = await _context.Customers
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var customers = await context.Customers
             .Where(c => c.CompanyId == _companyContext.CurrentCompanyId)
             .OrderBy(c => c.Name)
             .ToListAsync();
@@ -39,7 +40,8 @@ public class CustomerService : ICustomerService
         if (_companyContext.CurrentCompanyId == null)
             throw new InvalidOperationException(NoCompanyContextError);
 
-        var customer = await _context.Customers
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var customer = await context.Customers
             .FirstOrDefaultAsync(c => c.Id == id && c.CompanyId == _companyContext.CurrentCompanyId);
 
         return customer == null ? null : _mapper.Map<CustomerDto>(customer);
@@ -55,8 +57,9 @@ public class CustomerService : ICustomerService
         customer.CreatedAt = DateTime.UtcNow;
         customer.CreatedBy = "System"; // Should be current user in real implementation
 
-        _context.Customers.Add(customer);
-        await _context.SaveChangesAsync();
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        context.Customers.Add(customer);
+        await context.SaveChangesAsync();
 
         return _mapper.Map<CustomerDto>(customer);
     }
@@ -66,7 +69,8 @@ public class CustomerService : ICustomerService
         if (_companyContext.CurrentCompanyId == null)
             throw new InvalidOperationException(NoCompanyContextError);
 
-        var customer = await _context.Customers
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var customer = await context.Customers
             .FirstOrDefaultAsync(c => c.Id == id && c.CompanyId == _companyContext.CurrentCompanyId);
 
         if (customer == null)
@@ -76,7 +80,7 @@ public class CustomerService : ICustomerService
         customer.UpdatedAt = DateTime.UtcNow;
         customer.UpdatedBy = "System"; // Should be current user in real implementation
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
 
         return _mapper.Map<CustomerDto>(customer);
     }
@@ -86,21 +90,23 @@ public class CustomerService : ICustomerService
         if (_companyContext.CurrentCompanyId == null)
             throw new InvalidOperationException(NoCompanyContextError);
 
-        var customer = await _context.Customers
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var customer = await context.Customers
             .FirstOrDefaultAsync(c => c.Id == id && c.CompanyId == _companyContext.CurrentCompanyId);
 
         if (customer == null)
             return false;
 
-        _context.Customers.Remove(customer);
-        await _context.SaveChangesAsync();
+        context.Customers.Remove(customer);
+        await context.SaveChangesAsync();
 
         return true;
     }
 
     public async Task<List<CustomerDto>> GetCustomersByCompanyIdAsync(int companyId)
     {
-        var customers = await _context.Customers
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var customers = await context.Customers
             .Where(c => c.CompanyId == companyId)
             .OrderBy(c => c.Name)
             .ToListAsync();

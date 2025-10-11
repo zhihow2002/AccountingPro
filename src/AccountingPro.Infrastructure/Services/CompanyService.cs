@@ -7,16 +7,17 @@ namespace AccountingPro.Infrastructure.Services;
 
 public class CompanyService : ICompanyService
 {
-    private readonly AccountingDbContext _context;
+    private readonly IDbContextFactory<AccountingDbContext> _contextFactory;
 
-    public CompanyService(AccountingDbContext context)
+    public CompanyService(IDbContextFactory<AccountingDbContext> contextFactory)
     {
-        _context = context;
+        _contextFactory = contextFactory;
     }
 
     public async Task<List<Company>> GetAllCompaniesAsync()
     {
-        return await _context.Companies
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Companies
             .AsNoTracking()
             .OrderBy(c => c.Name)
             .ToListAsync();
@@ -24,7 +25,8 @@ public class CompanyService : ICompanyService
 
     public async Task<Company?> GetCompanyByIdAsync(int id)
     {
-        return await _context.Companies
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Companies
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == id);
     }
@@ -37,8 +39,9 @@ public class CompanyService : ICompanyService
             throw new InvalidOperationException($"Company code '{company.Code}' already exists.");
         }
 
-        _context.Companies.Add(company);
-        await _context.SaveChangesAsync();
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        context.Companies.Add(company);
+        await context.SaveChangesAsync();
         return company;
     }
 
@@ -50,29 +53,33 @@ public class CompanyService : ICompanyService
             throw new InvalidOperationException($"Company code '{company.Code}' already exists.");
         }
 
-        _context.Companies.Update(company);
-        await _context.SaveChangesAsync();
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        context.Companies.Update(company);
+        await context.SaveChangesAsync();
         return company;
     }
 
     public async Task DeleteCompanyAsync(int id)
     {
-        var company = await _context.Companies.FindAsync(id);
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var company = await context.Companies.FindAsync(id);
         if (company != null)
         {
-            _context.Companies.Remove(company);
-            await _context.SaveChangesAsync();
+            context.Companies.Remove(company);
+            await context.SaveChangesAsync();
         }
     }
 
     public async Task<bool> CompanyExistsAsync(int id)
     {
-        return await _context.Companies.AnyAsync(c => c.Id == id);
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Companies.AnyAsync(c => c.Id == id);
     }
 
     public async Task<bool> CompanyCodeExistsAsync(string code, int? excludeId = null)
     {
-        var query = _context.Companies.Where(c => c.Code == code);
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var query = context.Companies.Where(c => c.Code == code);
         if (excludeId.HasValue)
         {
             query = query.Where(c => c.Id != excludeId.Value);

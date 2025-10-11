@@ -29,7 +29,7 @@
         <div class="stat-card">
             <div class="stat-icon revenue">✅</div>
             <div class="stat-content">
-                <h3>@suppliers.Count(s => s.Status == "Active")</h3>
+                <h3>@suppliers.Count(s => s.Status == SupplierStatus.Active)</h3>
                 <p>Active Suppliers</p>
                 <small>Currently active</small>
             </div>

@@ -150,39 +150,6 @@ else if (!_payments.Any())
                 </table>
             </div>
         }
-    </div>
-
-@* Remove old statistics section as it's now at the top *@
-@if (false)
-{
-        <div class="row mt-3">
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-body">
-                        <h6 class="text-muted">Total Payments</h6>
-                        <h3>@_payments.Count</h3>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-body">
-                        <h6 class="text-muted">Total Received</h6>
-                        <h3 class="text-success">@_payments.Sum(p => p.Amount).ToString("C")</h3>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-body">
-                        <h6 class="text-muted">This Month</h6>
-                        <h3>@_payments.Count(p => p.PaymentDate.Month == DateTime.Now.Month && p.PaymentDate.Year == DateTime.Now.Year)</h3>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
-</div>
 
 @code {
     private List<PaymentDto> _payments = new();
