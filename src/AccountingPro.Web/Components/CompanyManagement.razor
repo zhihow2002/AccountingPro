@@ -3,11 +3,8 @@
 @using AccountingPro.Core.Entities
 @inject ICompanyService CompanyService
 @inject NavigationManager Navigation
-
 <PageTitle>Company Management</PageTitle>
-
 <h1>Company Management</h1>
-
 <div class="row">
     <div class="col-md-8">
         <div class="card">
@@ -61,7 +58,6 @@
             </div>
         </div>
     </div>
-
     <div class="col-md-4">
         <div class="card">
             <div class="card-header">
@@ -71,59 +67,86 @@
                 <EditForm Model="@CompanyModel" OnValidSubmit="@HandleValidSubmit">
                     <DataAnnotationsValidator />
                     <ValidationSummary />
-
                     @if (!string.IsNullOrEmpty(ErrorMessage))
                     {
                         <div class="alert alert-danger">
-                            @ErrorMessage
+                        @ErrorMessage
                         </div>
                     }
-
                     <div class="form-group">
                         <label for="code">Company Code *</label>
-                        <InputText id="code" @bind-Value="CompanyModel.Code" class="form-control" placeholder="e.g., ABC001" />
+                        <InputText
+                            id="code"
+                            @bind-Value="CompanyModel.Code"
+                            class="form-control"
+                            placeholder="e.g., ABC001" />
                         <ValidationMessage For="@(() => CompanyModel.Code)" />
                     </div>
-
                     <div class="form-group">
                         <label for="name">Company Name *</label>
-                        <InputText id="name" @bind-Value="CompanyModel.Name" class="form-control" placeholder="Company Name" />
+                        <InputText
+                            id="name"
+                            @bind-Value="CompanyModel.Name"
+                            class="form-control"
+                            placeholder="Company Name" />
                         <ValidationMessage For="@(() => CompanyModel.Name)" />
                     </div>
-
                     <div class="form-group">
                         <label for="address">Address</label>
-                        <InputTextArea id="address" @bind-Value="CompanyModel.Address" class="form-control" rows="3" placeholder="Company Address" />
+                        <InputTextArea
+                            id="address"
+                            @bind-Value="CompanyModel.Address"
+                            class="form-control"
+                            rows="3"
+                            placeholder="Company Address" />
                         <ValidationMessage For="@(() => CompanyModel.Address)" />
                     </div>
-
                     <div class="form-group">
                         <label for="taxId">Tax ID</label>
-                        <InputText id="taxId" @bind-Value="CompanyModel.TaxId" class="form-control" placeholder="Tax Identification Number" />
+                        <InputText
+                            id="taxId"
+                            @bind-Value="CompanyModel.TaxId"
+                            class="form-control"
+                            placeholder="Tax Identification Number" />
                         <ValidationMessage For="@(() => CompanyModel.TaxId)" />
                     </div>
-
                     <div class="form-group">
                         <div class="form-check">
-                            <InputCheckbox id="enableInvoiceTax" @bind-Value="CompanyModel.EnableInvoiceTax" class="form-check-input" />
-                            <label for="enableInvoiceTax" class="form-check-label">Enable invoice tax calculation</label>
+                            <InputCheckbox
+                                id="enableInvoiceTax"
+                                @bind-Value="CompanyModel.EnableInvoiceTax"
+                                class="form-check-input" />
+                            <label for="enableInvoiceTax" class="form-check-label">
+                                Enable invoice tax calculation
+                            </label>
                         </div>
                     </div>
-
                     <div class="form-group">
                         <div class="form-check">
-                            <InputCheckbox id="isActive" @bind-Value="CompanyModel.IsActive" class="form-check-input" />
-                            <label for="isActive" class="form-check-label">Active</label>
+                            <InputCheckbox
+                                id="isActive"
+                                @bind-Value="CompanyModel.IsActive"
+                                class="form-check-input" />
+                            <label for="isActive" class="form-check-label">
+                                Active
+                            </label>
                         </div>
                     </div>
-
                     <div class="form-group">
-                        <button type="submit" class="btn btn-primary" disabled="@IsSubmitting">
+                        <button
+                            type="submit"
+                            class="btn btn-primary"
+                            disabled="@IsSubmitting">
                             @(IsSubmitting ? "Saving..." : (IsEditing ? "Update Company" : "Add Company"))
                         </button>
                         @if (IsEditing)
                         {
-                            <button type="button" class="btn btn-secondary ml-2" @onclick="CancelEdit">Cancel</button>
+                            <button
+                                type="button"
+                                class="btn btn-secondary ml-2"
+                                @onclick="CancelEdit">
+                                Cancel
+                            </button>
                         }
                     </div>
                 </EditForm>
@@ -131,7 +154,6 @@
         </div>
     </div>
 </div>
-
 @code {
     private List<Company> Companies = new();
     private Company CompanyModel = new();
