@@ -1,0 +1,393 @@
+@page "/proforma-invoices"
+@using AccountingPro.Application.DTOs
+@using AccountingPro.Core.Enums
+@using AccountingPro.Application.Services
+@inject IProformaInvoiceService ProformaService
+@inject ICustomerService CustomerService
+@inject IProductService ProductService
+@inject NavigationManager Navigation
+<PageTitle>Proforma Invoices - AccountingPro</PageTitle>
+<!-- Page Header -->
+<div class="page-header-section mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="page-header-title">
+                <i class="fas fa-file-contract text-primary"></i>
+                Proforma Invoice Management
+            </h1>
+            <p class="page-header-subtitle">Create and manage proforma invoices for quotations and advance billing</p>
+        </div>
+        <button class="btn btn-primary btn-lg shadow-sm" @onclick="ShowCreateModal">
+            <i class="fas fa-plus-circle"></i>
+            Create Proforma Invoice
+        </button>
+    </div>
+</div>
+<!-- Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon invoices">??</div>
+            <div class="stat-content">
+                <h3>
+                @proformaInvoices.Count
+                </h3>
+                <p>Total Proformas</p>
+                <small>All time</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon revenue">?</div>
+            <div class="stat-content">
+                <h3>
+                @proformaInvoices.Count(p => p.Status == ProformaStatus.Sent || p.Status == ProformaStatus.Accepted)
+                </h3>
+                <p>Active Proformas</p>
+                <small>Sent or Accepted</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon profit">??</div>
+            <div class="stat-content">
+                <h3>
+                    @proformaInvoices.Where(p => p.Status != ProformaStatus.Cancelled && p.Status != ProformaStatus.Rejected) .Sum(p => p.TotalAmount).ToString("C")
+                </h3>
+                <p>Total Value</p>
+                <small>Active proformas</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon expenses">??</div>
+            <div class="stat-content">
+                <h3>
+                @proformaInvoices.Count(p => p.Status == ProformaStatus.Converted)
+                </h3>
+                <p>Converted</p>
+                <small>To invoices</small>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Filters -->
+<div class="filter-section mb-4">
+    <div class="row g-3">
+        <div class="col-md-5">
+            <div class="input-group input-group-lg">
+                <span class="input-group-text bg-white">
+                    <i class="fas fa-search text-muted"></i>
+                </span>
+                <input
+                    type="text"
+                    class="form-control form-control-lg border-start-0"
+                    placeholder="Search by proforma number or customer..."
+                    @bind="searchTerm"
+                    @bind:event="oninput"
+                    @bind:after="FilterProformas" />
+            </div>
+        </div>
+        <div class="col-md-3">
+            <select
+                class="form-select form-select-lg"
+                @bind="selectedStatus"
+                @bind:after="FilterProformas">
+                <option value="">?? All Status</option>
+                <option value="@ProformaStatus.Draft">?? Draft</option>
+                <option value="@ProformaStatus.Sent">?? Sent</option>
+                <option value="@ProformaStatus.Accepted">? Accepted</option>
+                <option value="@ProformaStatus.Rejected">? Rejected</option>
+                <option value="@ProformaStatus.Converted">?? Converted</option>
+                <option value="@ProformaStatus.Expired">? Expired</option>
+                <option value="@ProformaStatus.Cancelled">?? Cancelled</option>
+            </select>
+        </div>
+        <div class="col-md-4 text-end">
+            <span class="badge bg-light text-dark fs-6 px-3 py-2">
+                <i class="fas fa-list"></i>
+                Showing
+                @filteredProformas.Count
+                of
+                @proformaInvoices.Count
+                proformas
+            </span>
+        </div>
+    </div>
+</div>
+<!-- Proforma Invoices Table -->
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">
+                            <i class="fas fa-hashtag me-2"></i>
+                            Proforma #
+                        </th>
+                        <th>
+                            <i class="fas fa-user me-2"></i>
+                            Customer
+                        </th>
+                        <th>
+                            <i class="fas fa-calendar me-2"></i>
+                            Issue Date
+                        </th>
+                        <th>
+                            <i class="fas fa-clock me-2"></i>
+                            Valid Until
+                        </th>
+                        <th>
+                            <i class="fas fa-dollar-sign me-2"></i>
+                            Amount
+                        </th>
+                        <th>
+                            <i class="fas fa-info-circle me-2"></i>
+                            Status
+                        </th>
+                        <th class="text-center">
+                            <i class="fas fa-cog me-2"></i>
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (filteredProformas.Any())
+                    {
+                        @foreach (var proforma in filteredProformas)
+                        {
+                            <tr>
+                                <td class="ps-4">
+                                    <strong class="text-primary">
+                                    @proforma.ProformaNumber
+                                    </strong>
+                                </td>
+                                <td>
+                                @proforma.CustomerName
+                                </td>
+                                <td>
+                                @proforma.IssueDate.ToString("MMM dd, yyyy")
+                                </td>
+                                <td>
+                                    @if (proforma.ValidUntil < DateTime.Today && proforma.Status != ProformaStatus.Converted)
+                                    {
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                            @proforma.ValidUntil.ToString("MMM dd, yyyy")
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span>
+                                        @proforma.ValidUntil.ToString("MMM dd, yyyy")
+                                        </span>
+                                    }
+                                </td>
+                                <td>
+                                    <strong class="text-success">
+                                    @proforma.TotalAmount.ToString("C")
+                                    </strong>
+                                </td>
+                                <td>
+                                    <span class="badge bg-@GetStatusColor(proforma.Status) fs-6 px-3 py-2">
+                                    @proforma.Status
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <button
+                                            class="btn btn-sm btn-outline-primary"
+                                            @onclick="() => ViewProforma(proforma.Id)"
+                                            title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        @if (proforma.Status != ProformaStatus.Converted)
+                                        {
+                                            <button
+                                                class="btn btn-sm btn-outline-success"
+                                                @onclick="() => EditProforma(proforma.Id)"
+                                                title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button
+                                                class="btn btn-sm btn-outline-info"
+                                                @onclick="() => ConvertToInvoice(proforma.Id)"
+                                                title="Convert to Invoice">
+                                                <i class="fas fa-exchange-alt"></i>
+                                            </button>
+                                        }
+                                        <button
+                                            class="btn btn-sm btn-outline-secondary"
+                                            @onclick="() => PrintProforma(proforma.Id)"
+                                            title="Print">
+                                            <i class="fas fa-print"></i>
+                                        </button>
+                                        @if (proforma.Status != ProformaStatus.Converted)
+                                        {
+                                            <button
+                                                class="btn btn-sm btn-outline-danger"
+                                                @onclick="() => DeleteProforma(proforma.Id)"
+                                                title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">
+                                <div class="py-5">
+                                    <div class="empty-state">
+                                        <i class="fas fa-file-contract fa-4x mb-3 text-muted" style="opacity: 0.3;"></i>
+                                        <h4 class="text-muted">No Proforma Invoices Found</h4>
+                                        <p class="text-muted mb-4">
+                                            @(searchTerm != "" || selectedStatus != "" ?
+                                                "Try adjusting your filters" :
+                                                "Get started by creating your first proforma invoice")
+                                        </p>
+                                        @if (searchTerm == "" && selectedStatus == "")
+                                        {
+                                            <button class="btn btn-primary btn-lg" @onclick="ShowCreateModal">
+                                                <i class="fas fa-plus-circle me-2"></i>
+                                                Create Proforma Invoice
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<ProformaInvoiceListDto> proformaInvoices = new();
+    private List<ProformaInvoiceListDto> filteredProformas = new();
+    private string searchTerm = "";
+    private string selectedStatus = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProformas();
+    }
+
+    private async Task LoadProformas()
+    {
+        try
+        {
+            // Get company ID from context service
+            proformaInvoices = await ProformaService.GetAllProformaInvoicesAsync(1); // TODO: Get from company context
+            filteredProformas = proformaInvoices;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading proforma invoices: {ex.Message}");
+        }
+    }
+
+    private void FilterProformas()
+    {
+        filteredProformas = proformaInvoices;
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filteredProformas = filteredProformas.Where(p =>
+                p.ProformaNumber.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                p.CustomerName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+            ).ToList();
+        }
+
+        if (!string.IsNullOrWhiteSpace(selectedStatus) && Enum.TryParse<ProformaStatus>(selectedStatus, out var status))
+        {
+            filteredProformas = filteredProformas.Where(p => p.Status == status).ToList();
+        }
+    }
+
+    private string GetStatusColor(ProformaStatus status)
+    {
+        return status switch
+        {
+            ProformaStatus.Draft => "secondary",
+            ProformaStatus.Sent => "primary",
+            ProformaStatus.Accepted => "success",
+            ProformaStatus.Rejected => "danger",
+            ProformaStatus.Converted => "info",
+            ProformaStatus.Expired => "warning",
+            ProformaStatus.Cancelled => "dark",
+            _ => "secondary"
+        };
+    }
+
+    private void ShowCreateModal()
+    {
+        Navigation.NavigateTo("/proforma-invoices/create");
+    }
+
+    private void ViewProforma(int id)
+    {
+        Navigation.NavigateTo($"/proforma-invoices/view/{id}");
+    }
+
+    private void EditProforma(int id)
+    {
+        Navigation.NavigateTo($"/proforma-invoices/edit/{id}");
+    }
+
+    private void PrintProforma(int id)
+    {
+        Navigation.NavigateTo($"/proforma-invoices/print/{id}");
+    }
+
+    private async Task ConvertToInvoice(int id)
+    {
+        if (confirm($"Convert this proforma invoice to a regular invoice?"))
+        {
+            try
+            {
+                await ProformaService.ConvertToInvoiceAsync(id);
+                await LoadProformas();
+                // TODO: Show success message
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error converting proforma: {ex.Message}");
+                // TODO: Show error message
+            }
+        }
+    }
+
+    private async Task DeleteProforma(int id)
+    {
+        if (confirm("Are you sure you want to delete this proforma invoice?"))
+        {
+            try
+            {
+                await ProformaService.DeleteProformaInvoiceAsync(id);
+                await LoadProformas();
+                // TODO: Show success message
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deleting proforma: {ex.Message}");
+                // TODO: Show error message
+            }
+        }
+    }
+
+    private bool confirm(string message)
+    {
+        // TODO: Implement proper confirmation dialog
+        return true;
+    }
+}
