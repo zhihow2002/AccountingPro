@@ -1,0 +1,551 @@
+@page "/sales/cash"
+@using AccountingPro.Application.DTOs
+@using AccountingPro.Core.Enums
+@using AccountingPro.Application.Services
+@inject IPaymentService PaymentService
+@inject ICompanyContextService CompanyContext
+@inject ICustomerService CustomerService
+@inject NavigationManager Navigation
+<PageTitle>Cash Sales - AccountingPro</PageTitle>
+<!-- Page Header -->
+<div class="page-header-section mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="page-header-title">
+                <i class="fas fa-cash-register text-success"></i>
+                Cash Sales Management
+            </h1>
+            <p class="page-header-subtitle">Track and manage cash sales transactions</p>
+        </div>
+        <a href="/sales/cash/create" class="btn btn-primary btn-lg shadow-sm">
+            <i class="fas fa-plus-circle"></i>
+            New Cash Sale
+        </a>
+    </div>
+</div>
+<!-- Cash Sales Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon invoices">??</div>
+            <div class="stat-content">
+                <h3>
+                @cashSales.Count
+                </h3>
+                <p>Total Sales</p>
+                <small>All time</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon revenue">??</div>
+            <div class="stat-content">
+                <h3>
+                    @cashSales.Sum(s => s.Amount) .ToString("C")
+                </h3>
+                <p>Total Revenue</p>
+                <small>All cash sales</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon profit">??</div>
+            <div class="stat-content">
+                <h3>
+                    @cashSales.Count(s => s.PaymentDate >= DateTime.Today.AddDays(-30) )
+                </h3>
+                <p>This Month</p>
+                <small>Last 30 days</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon expenses">??</div>
+            <div class="stat-content">
+                <h3>
+                @cashSales.Count(s => s.PaymentDate >= DateTime.Today)
+                </h3>
+                <p>Today</p>
+                <small>Sales today</small>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Filters -->
+<div class="filter-section mb-4">
+    <div class="row g-3">
+        <div class="col-md-3">
+            <div class="input-group input-group-lg">
+                <span class="input-group-text bg-white">
+                    <i class="fas fa-search text-muted"></i>
+                </span>
+                <input
+                    type="text"
+                    class="form-control form-control-lg border-start-0"
+                    placeholder="Search by payment number or customer..."
+                    @bind="searchTerm"
+                    @bind:event="oninput"
+                    @bind:after="FilterSales" />
+            </div>
+        </div>
+        <div class="col-md-2">
+            <select
+                class="form-select form-select-lg"
+                @bind="selectedPaymentMethod"
+                @bind:after="FilterSales">
+                <option value="">?? All Methods</option>
+                <option value="@PaymentMethod.Cash">?? Cash</option>
+                <option value="@PaymentMethod.CreditCard">?? Credit Card</option>
+                <option value="@PaymentMethod.Check">?? Check</option>
+                <option value="@PaymentMethod.BankTransfer">?? Bank Transfer</option>
+                <option value="@PaymentMethod.Other">?? Other</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select
+                class="form-select form-select-lg"
+                @bind="selectedCustomer"
+                @bind:after="FilterSales">
+                <option value="">?? All Customers</option>
+                @foreach (var customer in GetUniqueCustomers())
+                {
+                    <option value="@customer.Key">
+                    @customer.Value
+                    </option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <input
+                type="date"
+                class="form-control form-control-lg"
+                @bind="fromDate"
+                @bind:after="FilterSales" />
+        </div>
+        <div class="col-md-2">
+            <input
+                type="date"
+                class="form-control form-control-lg"
+                @bind="toDate"
+                @bind:after="FilterSales" />
+        </div>
+        <div class="col-md-1">
+            <select
+                class="form-select form-select-lg"
+                @bind="itemsPerPage"
+                @bind:after="ResetPagination">
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+        </div>
+    </div>
+</div>
+<!-- Cash Sales List -->
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">
+                            <i class="fas fa-calendar me-2"></i>
+                            Date
+                        </th>
+                        <th>
+                            <i class="fas fa-hashtag me-2"></i>
+                            Payment #
+                        </th>
+                        <th>
+                            <i class="fas fa-user me-2"></i>
+                            Customer
+                        </th>
+                        <th>
+                            <i class="fas fa-credit-card me-2"></i>
+                            Method
+                        </th>
+                        <th>
+                            <i class="fas fa-tag me-2"></i>
+                            Reference
+                        </th>
+                        <th>
+                            <i class="fas fa-dollar-sign me-2"></i>
+                            Amount
+                        </th>
+                        <th>
+                            <i class="fas fa-info-circle me-2"></i>
+                            Status
+                        </th>
+                        <th class="pe-4">
+                            <i class="fas fa-cog me-2"></i>
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (paginatedSales.Any())
+                    {
+                        @foreach (var sale in paginatedSales)
+                        {
+                            <tr class="invoice-row">
+                                <td class="ps-4">
+                                    <div class="fw-medium">
+                                    @sale.PaymentDate.ToString("MMM dd, yyyy")
+                                    </div>
+                                    <small class="text-muted">
+                                    @sale.PaymentDate.ToString("hh:mm tt")
+                                    </small>
+                                </td>
+                                <td>
+                                    <strong class="text-primary">
+                                    @sale.PaymentNumber
+                                    </strong>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="customer-avatar me-2">
+                                            <i class="fas fa-user-circle fa-2x text-muted"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-medium">
+                                                @ (sale.CustomerName ?? "Walk-in Customer")
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-@GetMethodColor(sale.PaymentMethod) rounded-pill px-3">
+                                    @sale.PaymentMethod
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="text-muted">
+                                        @ (sale.Reference ?? "-")
+                                    </span>
+                                </td>
+                                <td>
+                                    <strong class="text-success fs-5">
+                                    @sale.Amount.ToString("C")
+                                    </strong>
+                                </td>
+                                <td>
+                                    <span class="badge bg-@GetStatusColor(sale.Status) rounded-pill px-3">
+                                        <i class="fas fa-check-circle me-1"></i>
+                                        @sale.Status
+                                    </span>
+                                </td>
+                                <td class="pe-4">
+                                    <div class="btn-group" role="group">
+                                        <button
+                                            class="btn btn-sm btn-outline-primary"
+                                            @onclick="() => ViewSale(sale.Id)"
+                                            title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <a
+                                            href="/payments/receipt/print/@sale.Id"
+                                            class="btn btn-sm btn-outline-info"
+                                            title="Print Receipt">
+                                            <i class="fas fa-print"></i>
+                                        </a>
+                                        @if (sale.Status != PaymentStatus.Cancelled)
+                                        {
+                                            <button
+                                                class="btn btn-sm btn-outline-danger"
+                                                @onclick="() => CancelSale(sale.Id)"
+                                                title="Cancel Sale">
+                                                <i class="fas fa-ban"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center py-5">
+                                <div class="empty-state">
+                                    <i class="fas fa-cash-register fa-4x mb-3 text-muted" style="opacity: 0.3;"></i>
+                                    <h4 class="text-muted">No Cash Sales Found</h4>
+                                    <p class="text-muted mb-4">
+                                        @ (searchTerm != "" || selectedPaymentMethod != "" || selectedCustomer != "" ?
+                                            "Try adjusting your filters" :
+                                            "Get started by creating your first cash sale")
+                                    </p>
+                                    @if (searchTerm == "" && selectedPaymentMethod == "" && selectedCustomer == "")
+                                    {
+                                        <a href="/sales/cash/create" class="btn btn-primary btn-lg">
+                                            <i class="fas fa-plus-circle me-2"></i>
+                                            Create First Cash Sale
+                                        </a>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<!-- Pagination -->
+@if (totalPages > 1)
+{
+    <div class="pagination-section mt-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="pagination-info">
+                <span class="text-muted">
+                    Showing
+                    <strong>
+                        @ ((currentPage - 1) * itemsPerPage + 1)
+                    </strong>
+                    to
+                    <strong>
+                    @Math.Min(currentPage * itemsPerPage, filteredSales.Count)
+                    </strong>
+                    of
+                    <strong>
+                    @filteredSales.Count
+                    </strong>
+                    cash sales
+                </span>
+            </div>
+            <nav aria-label="Cash sales pagination">
+                <ul class="pagination mb-0">
+                    <li
+                        class="page-item @(currentPage == 1 ? "
+                        disabled
+                        :>
+                        <button
+                            class="page-link"
+                            @onclick="() => ChangePage(1)"
+                            disabled="@(currentPage == 1)">
+                            <i class="fas fa-angle-double-left"></i>
+                        </button>
+                    </li>
+                    <li
+                        class="page-item @(currentPage == 1 ? "
+                        disabled
+                        :>
+                        <button
+                            class="page-link"
+                            @onclick="() => ChangePage(currentPage - 1)"
+                            disabled="@(currentPage == 1)">
+                            <i class="fas fa-angle-left"></i>
+                        </button>
+                    </li>
+                    @for
+                    (int i = Math.Max(1, currentPage - 2); i
+                    <
+                    = Math.Min(totalPages, currentPage + 2); i++)
+                    {
+                        var pageNumber = i;
+                    <li
+                        class="page-item @(currentPage == pageNumber ? "
+                        active
+                        :>
+                        <button class="page-link" @onclick="() => ChangePage(pageNumber)">
+                            @pageNumber
+                        </button>
+                    </li>
+                    }
+                    <li
+                        class="page-item @(currentPage == totalPages ? "
+                        disabled
+                        :>
+                        <button
+                            class="page-link"
+                            @onclick="() => ChangePage(currentPage + 1)"
+                            disabled="@(currentPage == totalPages)">
+                            <i class="fas fa-angle-right"></i>
+                        </button>
+                    </li>
+                    <li
+                        class="page-item @(currentPage == totalPages ? "
+                        disabled
+                        :>
+                        <button
+                            class="page-link"
+                            @onclick="() => ChangePage(totalPages)"
+                            disabled="@(currentPage == totalPages)">
+                            <i class="fas fa-angle-double-right"></i>
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+}
+@
+code {
+    private List
+<
+PaymentDto> cashSales = new();
+    private List
+<
+PaymentDto> filteredSales = new();
+    private List
+<
+PaymentDto> paginatedSales = new();
+    private string searchTerm = "";
+    private string selectedPaymentMethod = "";
+    private string selectedCustomer = "";
+    private DateTime? fromDate;
+    private DateTime? toDate;
+
+    // Pagination
+    private int currentPage = 1;
+    private int itemsPerPage = 25;
+    private int totalPages => (int)Math.Ceiling((double)filteredSales.Count / itemsPerPage);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCashSales();
+    }
+
+    private async Task LoadCashSales()
+    {
+        try
+        {
+            if (!CompanyContext.CurrentCompanyId.HasValue)
+            {
+                await CompanyContext.InitializeAsync();
+            }
+
+            if (CompanyContext.CurrentCompanyId.HasValue)
+            {
+                // Get all payments and filter for cash sales (those without InvoiceId)
+                var allPayments = await PaymentService.GetPaymentsByCompanyAsync(CompanyContext.CurrentCompanyId.Value);
+                cashSales = allPayments.Where(p => p.InvoiceId == null || p.InvoiceId == 0).ToList();
+                filteredSales = cashSales.ToList();
+                UpdatePagination();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading cash sales: {ex.Message}");
+            cashSales = new List
+<
+PaymentDto>();
+            filteredSales = new List
+<
+PaymentDto>();
+            paginatedSales = new List
+<
+PaymentDto>();
+        }
+    }
+
+    private void FilterSales()
+    {
+        filteredSales = cashSales.Where(s =>
+            (string.IsNullOrEmpty(searchTerm) ||
+             s.PaymentNumber.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+             (s.CustomerName != null && s.CustomerName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+             (s.Reference != null && s.Reference.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))) &&
+            (string.IsNullOrEmpty(selectedPaymentMethod) || s.PaymentMethod.ToString() == selectedPaymentMethod) &&
+            (string.IsNullOrEmpty(selectedCustomer) || (s.CustomerId.HasValue && s.CustomerId.ToString() == selectedCustomer)) &&
+            (fromDate == null || s.PaymentDate >= fromDate) &&
+            (toDate == null || s.PaymentDate
+<
+= toDate)
+        ).ToList();
+
+        currentPage = 1; // Reset to first page when filtering
+        UpdatePagination();
+    }
+
+    private void UpdatePagination()
+    {
+        paginatedSales = filteredSales
+            .Skip((currentPage - 1) * itemsPerPage)
+            .Take(itemsPerPage)
+            .ToList();
+    }
+
+    private void ChangePage(int page)
+    {
+        if (page >= 1 && page
+<
+= totalPages)
+        {
+            currentPage = page;
+            UpdatePagination();
+        }
+    }
+
+    private void ResetPagination()
+    {
+        currentPage = 1;
+        UpdatePagination();
+    }
+
+    private Dictionary
+<
+string, string> GetUniqueCustomers()
+    {
+        return cashSales
+            .Where(s => s.CustomerId.HasValue && !string.IsNullOrEmpty(s.CustomerName))
+            .GroupBy(s => s.CustomerId)
+            .ToDictionary(g => g.Key.ToString(), g => g.First().CustomerName);
+    }
+
+    private void ViewSale(int saleId)
+    {
+        Navigation.NavigateTo($"/payments/receipt/print/{saleId}");
+    }
+
+    private async Task CancelSale(int saleId)
+    {
+        if (confirm("Are you sure you want to cancel this cash sale?"))
+        {
+            try
+            {
+                // TODO: Implement cancel payment method in PaymentService
+                // await PaymentService.CancelPaymentAsync(saleId);
+                await LoadCashSales();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error cancelling cash sale: {ex.Message}");
+            }
+        }
+    }
+
+    private bool confirm(string message)
+    {
+        // TODO: Implement proper confirmation dialog
+        return true;
+    }
+
+    private string GetMethodColor(PaymentMethod method)
+    {
+        return method switch
+        {
+            PaymentMethod.Cash => "success",
+            PaymentMethod.CreditCard => "primary",
+            PaymentMethod.Check => "info",
+            PaymentMethod.BankTransfer => "warning",
+            PaymentMethod.Other => "secondary",
+            _ => "secondary"
+        };
+    }
+
+    private string GetStatusColor(PaymentStatus status)
+    {
+        return status switch
+        {
+            PaymentStatus.Completed => "success",
+            PaymentStatus.Pending => "warning",
+            PaymentStatus.Failed => "danger",
+            PaymentStatus.Cancelled => "secondary",
+            _ => "secondary"
+        };
+    }
+}

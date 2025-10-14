@@ -5,30 +5,99 @@
 @inject ICustomerService CustomerService
 @inject ICountryService CountryService
 @inject NavigationManager Navigation
-
 <PageTitle>Customers - AccountingPro</PageTitle>
-
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>Customer Management</h1>
     <button class="btn btn-primary" @onclick="ShowCreateModal">
-        <i class="fas fa-plus"></i> Add Customer
+        <i class="fas fa-plus"></i>
+        Add Customer
     </button>
 </div>
-
+<!-- Customer Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon invoices">??</div>
+            <div class="stat-content">
+                <h3>
+                @customers.Count
+                </h3>
+                <p>Total Customers</p>
+                <small>All time</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon revenue">?</div>
+            <div class="stat-content">
+                <h3>
+                @customers.Count(c => c.Status == CustomerStatus.Active)
+                </h3>
+                <p>Active Customers</p>
+                <small>Currently active</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon profit">??</div>
+            <div class="stat-content">
+                <h3>
+                    @customers.Sum(c => c.CreditLimit) .ToString("C")
+                </h3>
+                <p>Total Credit</p>
+                <small>Credit limits</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon expenses">??</div>
+            <div class="stat-content">
+                <h3>
+                    @customers.Sum(c => c.OutstandingBalance) .ToString("C")
+                </h3>
+                <p>Outstanding</p>
+                <small class="text-warning">Pending payments</small>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Filters -->
 <div class="row mb-3">
     <div class="col-md-4">
-        <input type="text" class="form-control" placeholder="Search customers..." @bind="searchTerm" @oninput="FilterCustomers" />
+        <input
+            type="text"
+            class="form-control"
+            placeholder="Search customers..."
+            @bind="searchTerm"
+            @bind:event="oninput"
+            @bind:after="FilterCustomers" />
     </div>
     <div class="col-md-2">
-        <select class="form-control" @bind="selectedStatus" >
+        <select
+            class="form-control"
+            @bind="selectedStatus"
+            @bind:after="FilterCustomers">
             <option value="">All Status</option>
             <option value="@CustomerStatus.Active">Active</option>
             <option value="@CustomerStatus.Inactive">Inactive</option>
             <option value="@CustomerStatus.Blocked">Blocked</option>
         </select>
     </div>
+    <div class="col-md-3">
+        <select
+            class="form-control"
+            @bind="itemsPerPage"
+            @bind:after="ResetPagination">
+            <option value="10">10 per page</option>
+            <option value="25">25 per page</option>
+            <option value="50">50 per page</option>
+            <option value="100">100 per page</option>
+        </select>
+    </div>
 </div>
-
 <div class="table-responsive">
     <table class="table table-striped">
         <thead>
@@ -44,35 +113,61 @@
             </tr>
         </thead>
         <tbody>
-            @if (filteredCustomers.Any())
+            @if (paginatedCustomers.Any())
             {
-                @foreach (var customer in filteredCustomers)
+                @foreach (var customer in paginatedCustomers)
                 {
                     <tr>
-                        <td>@customer.Name</td>
-                        <td>@customer.Email</td>
-                        <td>@customer.Phone</td>
-                        <td>@customer.City</td>
-                        <td>@customer.CreditLimit.ToString("C")</td>
                         <td>
-                            <span class="@(customer.OutstandingBalance > 0 ? "text-warning" : "text-success")">
+                        @customer.Name
+                        </td>
+                        <td>
+                        @customer.Email
+                        </td>
+                        <td>
+                        @customer.Phone
+                        </td>
+                        <td>
+                        @customer.City
+                        </td>
+                        <td>
+                        @customer.CreditLimit.ToString("C")
+                        </td>
+                        <td>
+                            <span
+                                class="@(customer.OutstandingBalance > 0 ? "
+                                text-warning
+                                :
+                                text-success>
                                 @customer.OutstandingBalance.ToString("C")
                             </span>
                         </td>
                         <td>
                             <span class="badge badge-@GetStatusClass(customer.Status)">
-                                @customer.Status
+                            @customer.Status
                             </span>
                         </td>
                         <td>
-                            <div class="btn-group" role="group" aria-label="Customer actions">
-                                <button class="btn btn-sm btn-outline-primary" @onclick="() => EditCustomer(customer)" title="Edit Customer">
+                            <div
+                                class="btn-group"
+                                role="group"
+                                aria-label="Customer actions">
+                                <button
+                                    class="btn btn-sm btn-outline-primary"
+                                    @onclick="() => EditCustomer(customer)"
+                                    title="Edit Customer">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button class="btn btn-sm btn-outline-success" @onclick="() => CreateInvoice(customer.Id)" title="Create Invoice">
+                                <button
+                                    class="btn btn-sm btn-outline-success"
+                                    @onclick="() => CreateInvoice(customer.Id)"
+                                    title="Create Invoice">
                                     <i class="fas fa-file-invoice-dollar"></i>
                                 </button>
-                                <button class="btn btn-sm btn-outline-info" @onclick="() => ViewStatement(customer.Id)" title="View Statement">
+                                <button
+                                    class="btn btn-sm btn-outline-info"
+                                    @onclick="() => ViewStatement(customer.Id)"
+                                    title="View Statement">
                                     <i class="fas fa-chart-line"></i>
                                 </button>
                             </div>
@@ -83,13 +178,90 @@
             else
             {
                 <tr>
-                    <td colspan="8" class="text-center text-muted">No customers found</td>
+                    <td colspan="8" class="text-center text-muted py-4">
+                        <i class="fas fa-users" style="font-size: 2rem; opacity: 0.3;"></i>
+                        <p class="mt-2">No customers found</p>
+                        <button class="btn btn-primary" @onclick="ShowCreateModal">
+                            Create Your First Customer
+                        </button>
+                    </td>
                 </tr>
             }
         </tbody>
     </table>
 </div>
-
+<!-- Pagination -->
+@if (totalPages > 1)
+{
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <div>
+            Showing@ ((currentPage - 1) * itemsPerPage + 1) to@Math.Min(currentPage * itemsPerPage, filteredCustomers.Count) of@filteredCustomers.Count customers
+        </div>
+        <nav>
+            <ul class="pagination mb-0">
+                <li
+                    class="page-item @(currentPage == 1 ? "
+                    disabled
+                    :>
+                    <button
+                        class="page-link"
+                        @onclick="() => ChangePage(1)"
+                        disabled="@(currentPage == 1)">
+                        First
+                    </button>
+                </li>
+                <li
+                    class="page-item @(currentPage == 1 ? "
+                    disabled
+                    :>
+                    <button
+                        class="page-link"
+                        @onclick="() => ChangePage(currentPage - 1)"
+                        disabled="@(currentPage == 1)">
+                        Previous
+                    </button>
+                </li>
+                @for
+                (int i = Math.Max(1, currentPage - 2); i
+                <
+                = Math.Min(totalPages, currentPage + 2); i++)
+                {
+                    var pageNumber = i;
+                <li
+                    class="page-item @(currentPage == pageNumber ? "
+                    active
+                    :>
+                    <button class="page-link" @onclick="() => ChangePage(pageNumber)">
+                        @pageNumber
+                    </button>
+                </li>
+                }
+                <li
+                    class="page-item @(currentPage == totalPages ? "
+                    disabled
+                    :>
+                    <button
+                        class="page-link"
+                        @onclick="() => ChangePage(currentPage + 1)"
+                        disabled="@(currentPage == totalPages)">
+                        Next
+                    </button>
+                </li>
+                <li
+                    class="page-item @(currentPage == totalPages ? "
+                    disabled
+                    :>
+                    <button
+                        class="page-link"
+                        @onclick="() => ChangePage(totalPages)"
+                        disabled="@(currentPage == totalPages)">
+                        Last
+                    </button>
+                </li>
+            </ul>
+        </nav>
+    </div>
+}
 <!-- Create/Edit Customer Modal -->
 @if (showModal)
 {
@@ -97,8 +269,13 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">@(isEditing ? "Edit Customer" : "Add New Customer")</h5>
-                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                    <h5 class="modal-title">
+                        @ (isEditing ? "Edit Customer" : "Add New Customer")
+                    </h5>
+                    <button
+                        type="button"
+                        class="btn-close"
+                        @onclick="CloseModal"></button>
                 </div>
                 <div class="modal-body">
                     <EditForm Model="customerForm" OnValidSubmit="SaveCustomer">
@@ -140,7 +317,10 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Address</label>
-                            <InputTextArea class="form-control" @bind-Value="customerForm.Address" rows="2" />
+                            <InputTextArea
+                                class="form-control"
+                                @bind-Value="customerForm.Address"
+                                rows="2" />
                         </div>
                         <div class="row">
                             <div class="col-md-4">
@@ -170,7 +350,9 @@
                                         <option value="">Select a country...</option>
                                         @foreach (var country in countries)
                                         {
-                                            <option value="@country.Code">@country.Name</option>
+                                            <option value="@country.Code">
+                                            @country.Name
+                                            </option>
                                         }
                                     </select>
                                 </div>
@@ -187,8 +369,15 @@
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Save Customer</button>
+                            <button
+                                type="button"
+                                class="btn btn-secondary"
+                                @onclick="CloseModal">
+                                Cancel
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                Save Customer
+                            </button>
                         </div>
                     </EditForm>
                 </div>
@@ -196,11 +385,20 @@
         </div>
     </div>
 }
-
-@code {
-    private List<CustomerDto> customers = new();
-    private List<CustomerDto> filteredCustomers = new();
-    private List<CountryDto> countries = new();
+@
+code {
+    private List
+<
+CustomerDto> customers = new();
+    private List
+<
+CustomerDto> filteredCustomers = new();
+    private List
+<
+CustomerDto> paginatedCustomers = new();
+    private List
+<
+CountryDto> countries = new();
     private string searchTerm = "";
     private string selectedStatus = "";
     private bool showModal = false;
@@ -208,10 +406,16 @@
     private CreateCustomerDto customerForm = new();
     private int editingCustomerId;
 
+    // Pagination
+    private int currentPage = 1;
+    private int itemsPerPage = 25;
+    private int totalPages => (int)Math.Ceiling((double)filteredCustomers.Count / itemsPerPage);
+
     protected override async Task OnInitializedAsync()
     {
-        await LoadCustomers();
+        // Load sequentially to avoid DbContext concurrency issues
         await LoadCountries();
+        await LoadCustomers();
     }
 
     private async Task LoadCountries()
@@ -223,7 +427,9 @@
         catch (Exception ex)
         {
             Console.WriteLine($"Error loading countries: {ex.Message}");
-            countries = new List<CountryDto>();
+            countries = new List
+<
+CountryDto>();
         }
     }
 
@@ -233,25 +439,61 @@
         {
             customers = await CustomerService.GetAllCustomersAsync();
             filteredCustomers = customers.ToList();
+            UpdatePagination();
         }
         catch (Exception ex)
         {
             // In a real app, this would use a proper logging framework
             Console.WriteLine($"Error loading customers: {ex.Message}");
-            customers = new List<CustomerDto>();
-            filteredCustomers = new List<CustomerDto>();
+            customers = new List
+<
+CustomerDto>();
+            filteredCustomers = new List
+<
+CustomerDto>();
+            paginatedCustomers = new List
+<
+CustomerDto>();
         }
     }
 
     private void FilterCustomers()
     {
-        filteredCustomers = customers.Where(c => 
-            (string.IsNullOrEmpty(searchTerm) || 
+        filteredCustomers = customers.Where(c =>
+            (string.IsNullOrEmpty(searchTerm) ||
              c.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
              c.Email.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
              c.Phone.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) &&
             (string.IsNullOrEmpty(selectedStatus) || c.Status.ToString() == selectedStatus)
         ).ToList();
+
+        currentPage = 1; // Reset to first page when filtering
+        UpdatePagination();
+    }
+
+    private void UpdatePagination()
+    {
+        paginatedCustomers = filteredCustomers
+            .Skip((currentPage - 1) * itemsPerPage)
+            .Take(itemsPerPage)
+            .ToList();
+    }
+
+    private void ChangePage(int page)
+    {
+        if (page >= 1 && page
+<
+= totalPages)
+        {
+            currentPage = page;
+            UpdatePagination();
+        }
+    }
+
+    private void ResetPagination()
+    {
+        currentPage = 1;
+        UpdatePagination();
     }
 
     private void ShowCreateModal()
@@ -321,7 +563,7 @@
                 var newCustomer = await CustomerService.CreateCustomerAsync(customerForm);
                 await LoadCustomers(); // Reload the data from database
             }
-            
+
             CloseModal();
         }
         catch (Exception ex)
