@@ -385,20 +385,12 @@
         </div>
     </div>
 }
-@
-code {
-    private List
-<
-CustomerDto> customers = new();
-    private List
-<
-CustomerDto> filteredCustomers = new();
-    private List
-<
-CustomerDto> paginatedCustomers = new();
-    private List
-<
-CountryDto> countries = new();
+
+@code {
+    private List<CustomerDto> customers = new();
+    private List<CustomerDto> filteredCustomers = new();
+    private List<CustomerDto> paginatedCustomers = new();
+    private List<CountryDto> countries = new();
     private string searchTerm = "";
     private string selectedStatus = "";
     private bool showModal = false;
@@ -427,9 +419,7 @@ CountryDto> countries = new();
         catch (Exception ex)
         {
             Console.WriteLine($"Error loading countries: {ex.Message}");
-            countries = new List
-<
-CountryDto>();
+            countries = new List<CountryDto>();
         }
     }
 
@@ -445,15 +435,9 @@ CountryDto>();
         {
             // In a real app, this would use a proper logging framework
             Console.WriteLine($"Error loading customers: {ex.Message}");
-            customers = new List
-<
-CustomerDto>();
-            filteredCustomers = new List
-<
-CustomerDto>();
-            paginatedCustomers = new List
-<
-CustomerDto>();
+            customers = new List<CustomerDto>();
+            filteredCustomers = new List<CustomerDto>();
+            paginatedCustomers = new List<CustomerDto>();
         }
     }
 
@@ -481,9 +465,7 @@ CustomerDto>();
 
     private void ChangePage(int page)
     {
-        if (page >= 1 && page
-<
-= totalPages)
+        if (page >= 1 && page <= totalPages)
         {
             currentPage = page;
             UpdatePagination();

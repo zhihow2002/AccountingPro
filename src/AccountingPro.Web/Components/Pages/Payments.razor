@@ -299,17 +299,11 @@ else
         </div>
     }
 }
-@
-code {
-    private List
-<
-PaymentDto> _payments = new();
-    private List
-<
-PaymentDto> filteredPayments = new();
-    private List
-<
-PaymentDto> paginatedPayments = new();
+
+@code {
+    private List<PaymentDto> _payments = new();
+    private List<PaymentDto> filteredPayments = new();
+    private List<PaymentDto> paginatedPayments = new();
     private bool _isLoading = true;
 
     // Filter variables
@@ -362,9 +356,7 @@ PaymentDto> paginatedPayments = new();
             .Where(p => string.IsNullOrEmpty(selectedStatus) || p.Status.ToString() == selectedStatus)
             .Where(p => string.IsNullOrEmpty(selectedMethod) || p.PaymentMethod.ToString() == selectedMethod)
             .Where(p => fromDate == null || p.PaymentDate >= fromDate)
-            .Where(p => toDate == null || p.PaymentDate
-<
-= toDate)
+            .Where(p => toDate == null || p.PaymentDate <= toDate)
             .OrderByDescending(p => p.PaymentDate)
             .ToList();
 
@@ -382,9 +374,7 @@ PaymentDto> paginatedPayments = new();
 
     private void ChangePage(int page)
     {
-        if (page >= 1 && page
-<
-= totalPages)
+        if (page >= 1 && page <= totalPages)
         {
             currentPage = page;
             UpdatePagination();
