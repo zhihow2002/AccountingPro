@@ -17,7 +17,9 @@
 <div class="row mb-4">
     <div class="col-md-3">
         <div class="stat-card">
-            <div class="stat-icon invoices">📦</div>
+            <div class="stat-icon invoices">
+                <i class="fas fa-truck"></i>
+            </div>
             <div class="stat-content">
                 <h3>@suppliers.Count</h3>
                 <p>Total Suppliers</p>
@@ -27,7 +29,9 @@
     </div>
     <div class="col-md-3">
         <div class="stat-card">
-            <div class="stat-icon revenue">✓</div>
+            <div class="stat-icon revenue">
+                <i class="fas fa-check-circle"></i>
+            </div>
             <div class="stat-content">
                 <h3>@suppliers.Count(s => s.Status == SupplierStatus.Active)</h3>
                 <p>Active Suppliers</p>
@@ -37,7 +41,9 @@
     </div>
     <div class="col-md-3">
         <div class="stat-card">
-            <div class="stat-icon profit">💰</div>
+            <div class="stat-icon profit">
+                <i class="fas fa-dollar-sign"></i>
+            </div>
             <div class="stat-content">
                 <h3>@suppliers.Sum(s => s.OutstandingBalance).ToString("C")</h3>
                 <p>Total Outstanding</p>
@@ -47,7 +53,9 @@
     </div>
     <div class="col-md-3">
         <div class="stat-card">
-            <div class="stat-icon expenses">⚠️</div>
+            <div class="stat-icon expenses">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
             <div class="stat-content">
                 <h3>@suppliers.Count(s => s.OutstandingBalance > 0)</h3>
                 <p>With Balance</p>

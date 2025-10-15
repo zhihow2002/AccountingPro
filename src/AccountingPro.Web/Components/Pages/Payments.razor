@@ -18,11 +18,11 @@
 <div class="row mb-4">
     <div class="col-md-3">
         <div class="stat-card">
-            <div class="stat-icon invoices">??</div>
+            <div class="stat-icon invoices">
+                <i class="fas fa-receipt"></i>
+            </div>
             <div class="stat-content">
-                <h3>
-                @_payments.Count
-                </h3>
+                <h3>@_payments.Count</h3>
                 <p>Total Payments</p>
                 <small>All time</small>
             </div>
@@ -30,11 +30,11 @@
     </div>
     <div class="col-md-3">
         <div class="stat-card">
-            <div class="stat-icon revenue">??</div>
+            <div class="stat-icon revenue">
+                <i class="fas fa-dollar-sign"></i>
+            </div>
             <div class="stat-content">
-                <h3>
-                    @_payments.Sum(p => p.Amount) .ToString("C")
-                </h3>
+                <h3>@_payments.Sum(p => p.Amount).ToString("C")</h3>
                 <p>Total Received</p>
                 <small>All payments</small>
             </div>
@@ -42,11 +42,11 @@
     </div>
     <div class="col-md-3">
         <div class="stat-card">
-            <div class="stat-icon profit">?</div>
+            <div class="stat-icon profit">
+                <i class="fas fa-check-circle"></i>
+            </div>
             <div class="stat-content">
-                <h3>
-                @_payments.Count(p => p.Status == PaymentStatus.Completed)
-                </h3>
+                <h3>@_payments.Count(p => p.Status == PaymentStatus.Completed)</h3>
                 <p>Completed</p>
                 <small>Successfully processed</small>
             </div>
@@ -54,11 +54,11 @@
     </div>
     <div class="col-md-3">
         <div class="stat-card">
-            <div class="stat-icon expenses">??</div>
+            <div class="stat-icon expenses">
+                <i class="fas fa-calendar-alt"></i>
+            </div>
             <div class="stat-content">
-                <h3>
-                    @_payments.Count(p => p.PaymentDate >= DateTime.Today.AddDays(-30) )
-                </h3>
+                <h3>@_payments.Count(p => p.PaymentDate >= DateTime.Today.AddDays(-30))</h3>
                 <p>This Month</p>
                 <small>Last 30 days</small>
             </div>

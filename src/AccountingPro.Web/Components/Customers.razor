@@ -17,11 +17,11 @@
 <div class="row mb-4">
     <div class="col-md-3">
         <div class="stat-card">
-            <div class="stat-icon invoices">??</div>
+            <div class="stat-icon invoices">
+                <i class="fas fa-users"></i>
+            </div>
             <div class="stat-content">
-                <h3>
-                @customers.Count
-                </h3>
+                <h3>@customers.Count</h3>
                 <p>Total Customers</p>
                 <small>All time</small>
             </div>
@@ -29,11 +29,11 @@
     </div>
     <div class="col-md-3">
         <div class="stat-card">
-            <div class="stat-icon revenue">?</div>
+            <div class="stat-icon revenue">
+                <i class="fas fa-user-check"></i>
+            </div>
             <div class="stat-content">
-                <h3>
-                @customers.Count(c => c.Status == CustomerStatus.Active)
-                </h3>
+                <h3>@customers.Count(c => c.Status == CustomerStatus.Active)</h3>
                 <p>Active Customers</p>
                 <small>Currently active</small>
             </div>
@@ -41,11 +41,11 @@
     </div>
     <div class="col-md-3">
         <div class="stat-card">
-            <div class="stat-icon profit">??</div>
+            <div class="stat-icon profit">
+                <i class="fas fa-credit-card"></i>
+            </div>
             <div class="stat-content">
-                <h3>
-                    @customers.Sum(c => c.CreditLimit) .ToString("C")
-                </h3>
+                <h3>@customers.Sum(c => c.CreditLimit).ToString("C")</h3>
                 <p>Total Credit</p>
                 <small>Credit limits</small>
             </div>
@@ -53,11 +53,11 @@
     </div>
     <div class="col-md-3">
         <div class="stat-card">
-            <div class="stat-icon expenses">??</div>
+            <div class="stat-icon expenses">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
             <div class="stat-content">
-                <h3>
-                    @customers.Sum(c => c.OutstandingBalance) .ToString("C")
-                </h3>
+                <h3>@customers.Sum(c => c.OutstandingBalance).ToString("C")</h3>
                 <p>Outstanding</p>
                 <small class="text-warning">Pending payments</small>
             </div>

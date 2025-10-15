@@ -15,7 +15,9 @@
 <div class="row mb-4">
     <div class="col-md-3">
         <div class="stat-card">
-            <div class="stat-icon invoices">📄</div>
+            <div class="stat-icon invoices">
+                <i class="fas fa-file-invoice"></i>
+            </div>
             <div class="stat-content">
                 <h3>@bills.Count</h3>
                 <p>Total Bills</p>
@@ -25,7 +27,9 @@
     </div>
     <div class="col-md-3">
         <div class="stat-card">
-            <div class="stat-icon revenue">💵</div>
+            <div class="stat-icon revenue">
+                <i class="fas fa-dollar-sign"></i>
+            </div>
             <div class="stat-content">
                 <h3>@bills.Sum(b => b.TotalAmount).ToString("C")</h3>
                 <p>Total Amount</p>
@@ -35,7 +39,9 @@
     </div>
     <div class="col-md-3">
         <div class="stat-card">
-            <div class="stat-icon profit">✓</div>
+            <div class="stat-icon profit">
+                <i class="fas fa-check-circle"></i>
+            </div>
             <div class="stat-content">
                 <h3>@bills.Count(b => b.Status == BillStatus.Paid)</h3>
                 <p>Paid Bills</p>
@@ -45,7 +51,9 @@
     </div>
     <div class="col-md-3">
         <div class="stat-card">
-            <div class="stat-icon expenses">⚠️</div>
+            <div class="stat-icon expenses">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
             <div class="stat-content">
                 <h3>@bills.Sum(b => b.OutstandingAmount).ToString("C")</h3>
                 <p>Outstanding</p>

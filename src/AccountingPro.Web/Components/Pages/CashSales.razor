@@ -27,11 +27,11 @@
 <div class="row mb-4">
     <div class="col-md-3">
         <div class="stat-card">
-            <div class="stat-icon invoices">??</div>
+            <div class="stat-icon invoices">
+                <i class="fas fa-cash-register"></i>
+            </div>
             <div class="stat-content">
-                <h3>
-                @cashSales.Count
-                </h3>
+                <h3>@cashSales.Count</h3>
                 <p>Total Sales</p>
                 <small>All time</small>
             </div>
@@ -39,11 +39,11 @@
     </div>
     <div class="col-md-3">
         <div class="stat-card">
-            <div class="stat-icon revenue">??</div>
+            <div class="stat-icon revenue">
+                <i class="fas fa-money-bill-wave"></i>
+            </div>
             <div class="stat-content">
-                <h3>
-                    @cashSales.Sum(s => s.Amount) .ToString("C")
-                </h3>
+                <h3>@cashSales.Sum(s => s.Amount).ToString("C")</h3>
                 <p>Total Revenue</p>
                 <small>All cash sales</small>
             </div>
@@ -51,11 +51,11 @@
     </div>
     <div class="col-md-3">
         <div class="stat-card">
-            <div class="stat-icon profit">??</div>
+            <div class="stat-icon profit">
+                <i class="fas fa-calendar-check"></i>
+            </div>
             <div class="stat-content">
-                <h3>
-                    @cashSales.Count(s => s.PaymentDate >= DateTime.Today.AddDays(-30) )
-                </h3>
+                <h3>@cashSales.Count(s => s.PaymentDate >= DateTime.Today.AddDays(-30))</h3>
                 <p>This Month</p>
                 <small>Last 30 days</small>
             </div>
@@ -63,11 +63,11 @@
     </div>
     <div class="col-md-3">
         <div class="stat-card">
-            <div class="stat-icon expenses">??</div>
+            <div class="stat-icon expenses">
+                <i class="fas fa-calendar-day"></i>
+            </div>
             <div class="stat-content">
-                <h3>
-                @cashSales.Count(s => s.PaymentDate >= DateTime.Today)
-                </h3>
+                <h3>@cashSales.Count(s => s.PaymentDate >= DateTime.Today)</h3>
                 <p>Today</p>
                 <small>Sales today</small>
             </div>
