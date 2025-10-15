@@ -134,11 +134,7 @@
                         @customer.CreditLimit.ToString("C")
                         </td>
                         <td>
-                            <span
-                                class="@(customer.OutstandingBalance > 0 ? "
-                                text-warning
-                                :
-                                text-success>
+                            <span class="@(customer.OutstandingBalance > 0 ? "text-warning" : "text-success")">
                                 @customer.OutstandingBalance.ToString("C")
                             </span>
                         </td>
@@ -195,14 +191,11 @@
 {
     <div class="d-flex justify-content-between align-items-center mt-3">
         <div>
-            Showing@ ((currentPage - 1) * itemsPerPage + 1) to@Math.Min(currentPage * itemsPerPage, filteredCustomers.Count) of@filteredCustomers.Count customers
+            Showing @((currentPage - 1) * itemsPerPage + 1) to @Math.Min(currentPage * itemsPerPage, filteredCustomers.Count) of @filteredCustomers.Count customers
         </div>
         <nav>
             <ul class="pagination mb-0">
-                <li
-                    class="page-item @(currentPage == 1 ? "
-                    disabled
-                    :>
+                <li class="page-item @(currentPage == 1 ? "disabled" : "")">
                     <button
                         class="page-link"
                         @onclick="() => ChangePage(1)"
@@ -210,10 +203,7 @@
                         First
                     </button>
                 </li>
-                <li
-                    class="page-item @(currentPage == 1 ? "
-                    disabled
-                    :>
+                <li class="page-item @(currentPage == 1 ? "disabled" : "")">
                     <button
                         class="page-link"
                         @onclick="() => ChangePage(currentPage - 1)"
@@ -221,25 +211,16 @@
                         Previous
                     </button>
                 </li>
-                @for
-                (int i = Math.Max(1, currentPage - 2); i
-                <
-                = Math.Min(totalPages, currentPage + 2); i++)
+                @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(totalPages, currentPage + 2); i++)
                 {
                     var pageNumber = i;
-                <li
-                    class="page-item @(currentPage == pageNumber ? "
-                    active
-                    :>
-                    <button class="page-link" @onclick="() => ChangePage(pageNumber)">
-                        @pageNumber
-                    </button>
-                </li>
+                    <li class="page-item @(currentPage == pageNumber ? "active" : "")">
+                        <button class="page-link" @onclick="() => ChangePage(pageNumber)">
+                            @pageNumber
+                        </button>
+                    </li>
                 }
-                <li
-                    class="page-item @(currentPage == totalPages ? "
-                    disabled
-                    :>
+                <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
                     <button
                         class="page-link"
                         @onclick="() => ChangePage(currentPage + 1)"
@@ -247,10 +228,7 @@
                         Next
                     </button>
                 </li>
-                <li
-                    class="page-item @(currentPage == totalPages ? "
-                    disabled
-                    :>
+                <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
                     <button
                         class="page-link"
                         @onclick="() => ChangePage(totalPages)"
@@ -270,7 +248,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">
-                        @ (isEditing ? "Edit Customer" : "Add New Customer")
+                        @(isEditing ? "Edit Customer" : "Add New Customer")
                     </h5>
                     <button
                         type="button"
@@ -278,7 +256,7 @@
                         @onclick="CloseModal"></button>
                 </div>
                 <div class="modal-body">
-                    <EditForm Model="customerForm" OnValidSubmit="SaveCustomer">
+                    <EditForm Model="@customerForm" OnValidSubmit="@SaveCustomer">
                         <DataAnnotationsValidator />
                         <div class="row">
                             <div class="col-md-6">
