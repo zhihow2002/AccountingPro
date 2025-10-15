@@ -1,0 +1,605 @@
+@page "/payments-made"
+@using AccountingPro.Application.DTOs
+@using AccountingPro.Core.Enums
+
+<PageTitle>Payments Made - AccountingPro</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Payments Made to Suppliers</h1>
+    <button class="btn btn-primary" @onclick="OpenCreateModal">
+        <i class="fas fa-plus"></i> Record Payment
+    </button>
+</div>
+
+<!-- Payment Made Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon invoices">💸</div>
+            <div class="stat-content">
+                <h3>@paymentsMade.Count</h3>
+                <p>Total Payments</p>
+                <small>All time</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon expenses">💵</div>
+            <div class="stat-content">
+                <h3>@paymentsMade.Sum(p => p.Amount).ToString("C")</h3>
+                <p>Total Paid</p>
+                <small>All payments</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon revenue">✓</div>
+            <div class="stat-content">
+                <h3>@paymentsMade.Count(p => p.Status == PaymentStatus.Completed)</h3>
+                <p>Completed</p>
+                <small class="text-success">Successfully processed</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon profit">📅</div>
+            <div class="stat-content">
+                <h3>@paymentsMade.Count(p => p.PaymentDate >= DateTime.Today.AddDays(-30))</h3>
+                <p>This Month</p>
+                <small>Last 30 days</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="row mb-3">
+    <div class="col-md-3">
+        <input
+            type="text"
+            class="form-control"
+            placeholder="Search payments..."
+            @bind="searchTerm"
+            @bind:event="oninput"
+            @bind:after="FilterPayments" />
+    </div>
+    <div class="col-md-2">
+        <select
+            class="form-control"
+            @bind="selectedStatus"
+            @bind:after="FilterPayments">
+            <option value="">All Status</option>
+            <option value="@PaymentStatus.Completed">Completed</option>
+            <option value="@PaymentStatus.Pending">Pending</option>
+            <option value="@PaymentStatus.Failed">Failed</option>
+            <option value="@PaymentStatus.Cancelled">Cancelled</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select
+            class="form-control"
+            @bind="selectedMethod"
+            @bind:after="FilterPayments">
+            <option value="">All Methods</option>
+            <option value="@PaymentMethod.Cash">Cash</option>
+            <option value="@PaymentMethod.CreditCard">Credit Card</option>
+            <option value="@PaymentMethod.Check">Check</option>
+            <option value="@PaymentMethod.BankTransfer">Bank Transfer</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <input
+            type="date"
+            class="form-control"
+            placeholder="From Date"
+            @bind="fromDate"
+            @bind:after="FilterPayments" />
+    </div>
+    <div class="col-md-2">
+        <input
+            type="date"
+            class="form-control"
+            placeholder="To Date"
+            @bind="toDate"
+            @bind:after="FilterPayments" />
+    </div>
+    <div class="col-md-1">
+        <select
+            class="form-control"
+            @bind="itemsPerPage"
+            @bind:after="ResetPagination">
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+        </select>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Payment #</th>
+                <th>Supplier</th>
+                <th>Bill #</th>
+                <th>Date</th>
+                <th>Method</th>
+                <th>Reference</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (paginatedPayments.Any())
+            {
+                @foreach (var payment in paginatedPayments)
+                {
+                    <tr>
+                        <td><strong>@payment.PaymentNumber</strong></td>
+                        <td>@payment.SupplierName</td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(payment.BillNumber))
+                            {
+                                <span class="text-muted">@payment.BillNumber</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">-</span>
+                            }
+                        </td>
+                        <td>@payment.PaymentDate.ToString("MMM dd, yyyy")</td>
+                        <td>
+                            <span class="badge bg-@GetMethodColor(payment.PaymentMethod) rounded-pill px-3">
+                                @payment.PaymentMethod
+                            </span>
+                        </td>
+                        <td>
+                            <span class="text-muted">
+                                @(payment.Reference ?? "-")
+                            </span>
+                        </td>
+                        <td>
+                            <strong class="text-danger fs-5">
+                                @payment.Amount.ToString("C")
+                            </strong>
+                        </td>
+                        <td>
+                            <span class="badge bg-@GetStatusColor(payment.Status) rounded-pill px-3">
+                                <i class="fas fa-@GetStatusIcon(payment.Status) me-1"></i>
+                                @payment.Status
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => ViewPayment(payment)" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                @if (payment.Status == PaymentStatus.Pending)
+                                {
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => CancelPayment(payment.Id)" title="Cancel Payment">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="9" class="text-center py-5">
+                        <div class="empty-state">
+                            <i class="fas fa-money-bill-wave fa-4x mb-3 text-muted" style="opacity: 0.3;"></i>
+                            <h4 class="text-muted">No Payments Found</h4>
+                            <p class="text-muted mb-4">
+                                @(searchTerm != "" || selectedStatus != "" || selectedMethod != "" ? "Try adjusting your filters" : "Get started by recording your first payment to a supplier")
+                            </p>
+                            @if (searchTerm == "" && selectedStatus == "" && selectedMethod == "")
+                            {
+                                <button class="btn btn-primary btn-lg" @onclick="OpenCreateModal">
+                                    <i class="fas fa-plus-circle me-2"></i>
+                                    Record First Payment
+                                </button>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+@if (totalPages > 1)
+{
+    <nav aria-label="Payment pagination" class="mt-4">
+        <ul class="pagination justify-content-center">
+            <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                <button
+                    class="page-link"
+                    @onclick="() => ChangePage(1)"
+                    disabled="@(currentPage == 1)">
+                    First
+                </button>
+            </li>
+            <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                <button
+                    class="page-link"
+                    @onclick="() => ChangePage(currentPage - 1)"
+                    disabled="@(currentPage == 1)">
+                    Previous
+                </button>
+            </li>
+            @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(totalPages, currentPage + 2); i++)
+            {
+                var pageNumber = i;
+                <li class="page-item @(currentPage == pageNumber ? "active" : "")">
+                    <button class="page-link" @onclick="() => ChangePage(pageNumber)">
+                        @pageNumber
+                    </button>
+                </li>
+            }
+            <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                <button
+                    class="page-link"
+                    @onclick="() => ChangePage(currentPage + 1)"
+                    disabled="@(currentPage == totalPages)">
+                    Next
+                </button>
+            </li>
+            <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                <button
+                    class="page-link"
+                    @onclick="() => ChangePage(totalPages)"
+                    disabled="@(currentPage == totalPages)">
+                    Last
+                </button>
+            </li>
+        </ul>
+    </nav>
+    <div class="text-center text-muted">
+        <small>
+            Showing @((currentPage - 1) * itemsPerPage + 1) to @Math.Min(currentPage * itemsPerPage, filteredPayments.Count) of @filteredPayments.Count payments
+        </small>
+    </div>
+}
+
+<!-- Create Payment Modal -->
+@if (showModal)
+{
+    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Record Payment to Supplier</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="@currentPayment" OnValidSubmit="@SavePayment">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Supplier *</label>
+                                    <select class="form-control" @bind="currentPayment.SupplierId" required>
+                                        <option value="">Select Supplier...</option>
+                                        @foreach (var supplier in availableSuppliers)
+                                        {
+                                            <option value="@supplier.Id">@supplier.CompanyName</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Bill (Optional)</label>
+                                    <select class="form-control" @bind="currentPayment.BillId">
+                                        <option value="">No linked bill</option>
+                                        @foreach (var bill in availableBills)
+                                        {
+                                            <option value="@bill.Id">@bill.BillNumber - @bill.OutstandingAmount.ToString("C") outstanding</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Payment Date *</label>
+                                    <input type="date" class="form-control" @bind="currentPayment.PaymentDate" required />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Amount *</label>
+                                    <input type="number" step="0.01" class="form-control" @bind="currentPayment.Amount" required />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Payment Method *</label>
+                                    <select class="form-control" @bind="currentPayment.PaymentMethod" required>
+                                        <option value="@PaymentMethod.Cash">Cash</option>
+                                        <option value="@PaymentMethod.Check">Check</option>
+                                        <option value="@PaymentMethod.CreditCard">Credit Card</option>
+                                        <option value="@PaymentMethod.BankTransfer">Bank Transfer</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Reference Number</label>
+                                    <input type="text" class="form-control" @bind="currentPayment.Reference" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Notes</label>
+                            <textarea class="form-control" rows="3" @bind="currentPayment.Notes"></textarea>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Record Payment</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<PaymentMadeDto> paymentsMade = new();
+    private List<PaymentMadeDto> filteredPayments = new();
+    private List<PaymentMadeDto> paginatedPayments = new();
+    private List<SupplierDto> availableSuppliers = new();
+    private List<BillDto> availableBills = new();
+    private PaymentMadeDto currentPayment = new();
+    private bool showModal = false;
+    private string searchTerm = "";
+    private string selectedStatus = "";
+    private string selectedMethod = "";
+    private DateTime? fromDate;
+    private DateTime? toDate;
+
+    // Pagination
+    private int currentPage = 1;
+    private int itemsPerPage = 25;
+    private int totalPages => (int)Math.Ceiling((double)filteredPayments.Count / itemsPerPage);
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Initialize sample suppliers
+        availableSuppliers = new List<SupplierDto>
+        {
+            new SupplierDto { Id = 1, CompanyName = "TechCorp Solutions" },
+            new SupplierDto { Id = 2, CompanyName = "Office Supplies Inc" },
+            new SupplierDto { Id = 3, CompanyName = "Global Manufacturing" }
+        };
+
+        // Initialize sample bills
+        availableBills = new List<BillDto>
+        {
+            new BillDto { Id = 1, BillNumber = "BILL-001", OutstandingAmount = 2750.00m },
+            new BillDto { Id = 3, BillNumber = "BILL-003", OutstandingAmount = 9350.00m }
+        };
+
+        // Initialize with sample data
+        paymentsMade = new List<PaymentMadeDto>
+        {
+            new PaymentMadeDto
+            {
+                Id = 1,
+                PaymentNumber = "PMT-001",
+                SupplierId = 1,
+                SupplierName = "TechCorp Solutions",
+                BillId = null,
+                BillNumber = null,
+                PaymentDate = DateTime.Today.AddDays(-5),
+                Amount = 1000.00m,
+                PaymentMethod = PaymentMethod.BankTransfer,
+                Reference = "TXN-12345",
+                Notes = "Partial payment for software licensing",
+                Status = PaymentStatus.Completed
+            },
+            new PaymentMadeDto
+            {
+                Id = 2,
+                PaymentNumber = "PMT-002",
+                SupplierId = 2,
+                SupplierName = "Office Supplies Inc",
+                BillId = null,
+                BillNumber = "BILL-002",
+                PaymentDate = DateTime.Today.AddDays(-3),
+                Amount = 495.00m,
+                PaymentMethod = PaymentMethod.Check,
+                Reference = "CHK-98765",
+                Notes = "Full payment for office supplies",
+                Status = PaymentStatus.Completed
+            },
+            new PaymentMadeDto
+            {
+                Id = 3,
+                PaymentNumber = "PMT-003",
+                SupplierId = 3,
+                SupplierName = "Global Manufacturing",
+                BillId = 3,
+                BillNumber = "BILL-003",
+                PaymentDate = DateTime.Today.AddDays(-1),
+                Amount = 5000.00m,
+                PaymentMethod = PaymentMethod.BankTransfer,
+                Reference = "TXN-54321",
+                Notes = "Partial payment for equipment",
+                Status = PaymentStatus.Pending
+            }
+        };
+
+        filteredPayments = paymentsMade.ToList();
+        UpdatePagination();
+    }
+
+    private void OpenCreateModal()
+    {
+        currentPayment = new PaymentMadeDto
+        {
+            PaymentDate = DateTime.Today,
+            PaymentMethod = PaymentMethod.BankTransfer,
+            Status = PaymentStatus.Completed
+        };
+        showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        currentPayment = new PaymentMadeDto();
+    }
+
+    private void SavePayment()
+    {
+        if (currentPayment.SupplierId == 0 || currentPayment.Amount <= 0)
+            return;
+
+        // Generate payment number
+        currentPayment.PaymentNumber = $"PMT-{(paymentsMade.Count + 1):D3}";
+        currentPayment.Id = paymentsMade.Count > 0 ? paymentsMade.Max(p => p.Id) + 1 : 1;
+
+        // Get supplier name
+        var supplier = availableSuppliers.FirstOrDefault(s => s.Id == currentPayment.SupplierId);
+        if (supplier != null)
+        {
+            currentPayment.SupplierName = supplier.CompanyName;
+        }
+
+        // Get bill number if linked
+        if (currentPayment.BillId.HasValue)
+        {
+            var bill = availableBills.FirstOrDefault(b => b.Id == currentPayment.BillId.Value);
+            if (bill != null)
+            {
+                currentPayment.BillNumber = bill.BillNumber;
+            }
+        }
+
+        paymentsMade.Add(currentPayment);
+        FilterPayments();
+        CloseModal();
+    }
+
+    private void ViewPayment(PaymentMadeDto payment)
+    {
+        // Implement view details logic
+        Console.WriteLine($"Viewing payment: {payment.PaymentNumber}");
+    }
+
+    private void CancelPayment(int id)
+    {
+        var payment = paymentsMade.FirstOrDefault(p => p.Id == id);
+        if (payment != null)
+        {
+            payment.Status = PaymentStatus.Cancelled;
+            FilterPayments();
+        }
+    }
+
+    private void FilterPayments()
+    {
+        filteredPayments = paymentsMade.Where(p =>
+            (string.IsNullOrEmpty(searchTerm) ||
+             p.PaymentNumber.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+             p.SupplierName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true ||
+             p.Reference?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true) &&
+            (string.IsNullOrEmpty(selectedStatus) || p.Status.ToString() == selectedStatus) &&
+            (string.IsNullOrEmpty(selectedMethod) || p.PaymentMethod.ToString() == selectedMethod) &&
+            (fromDate == null || p.PaymentDate >= fromDate) &&
+            (toDate == null || p.PaymentDate <= toDate)
+        ).ToList();
+
+        currentPage = 1; // Reset to first page when filtering
+        UpdatePagination();
+    }
+
+    private void UpdatePagination()
+    {
+        paginatedPayments = filteredPayments
+            .Skip((currentPage - 1) * itemsPerPage)
+            .Take(itemsPerPage)
+            .ToList();
+    }
+
+    private void ChangePage(int page)
+    {
+        if (page >= 1 && page <= totalPages)
+        {
+            currentPage = page;
+            UpdatePagination();
+        }
+    }
+
+    private void ResetPagination()
+    {
+        currentPage = 1;
+        UpdatePagination();
+    }
+
+    private string GetMethodColor(PaymentMethod method)
+    {
+        return method switch
+        {
+            PaymentMethod.Cash => "success",
+            PaymentMethod.CreditCard => "primary",
+            PaymentMethod.Check => "info",
+            PaymentMethod.BankTransfer => "warning",
+            _ => "secondary"
+        };
+    }
+
+    private string GetStatusColor(PaymentStatus status)
+    {
+        return status switch
+        {
+            PaymentStatus.Completed => "success",
+            PaymentStatus.Pending => "warning",
+            PaymentStatus.Failed => "danger",
+            PaymentStatus.Cancelled => "secondary",
+            _ => "info"
+        };
+    }
+
+    private string GetStatusIcon(PaymentStatus status)
+    {
+        return status switch
+        {
+            PaymentStatus.Completed => "check-circle",
+            PaymentStatus.Pending => "clock",
+            PaymentStatus.Failed => "times-circle",
+            PaymentStatus.Cancelled => "ban",
+            _ => "info-circle"
+        };
+    }
+
+    // DTO class for payments made
+    public class PaymentMadeDto
+    {
+        public int Id { get; set; }
+        public string PaymentNumber { get; set; } = "";
+        public int SupplierId { get; set; }
+        public string? SupplierName { get; set; }
+        public int? BillId { get; set; }
+        public string? BillNumber { get; set; }
+        public DateTime PaymentDate { get; set; }
+        public decimal Amount { get; set; }
+        public PaymentMethod PaymentMethod { get; set; }
+        public string? Reference { get; set; }
+        public string? Notes { get; set; }
+        public PaymentStatus Status { get; set; }
+    }
+}
