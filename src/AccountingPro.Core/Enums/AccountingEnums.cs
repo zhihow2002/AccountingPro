@@ -98,3 +98,14 @@ public enum TaxType
     GST = 4,
     Income = 5
 }
+
+public enum ProformaStatus
+{
+    Draft = 1,
+    Sent = 2,
+    Accepted = 3,
+    Rejected = 4,
+    Converted = 5,
+    Expired = 6,
+    Cancelled = 7
+}

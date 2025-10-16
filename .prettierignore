@@ -1,0 +1,12 @@
+# Ignore Razor files - they have syntax that breaks Prettier
+*.razor
+*.cshtml
+
+# Ignore build outputs
+**/bin/
+**/obj/
+**/.vs/
+
+# Ignore package directories
+**/node_modules/
+**/wwwroot/lib/

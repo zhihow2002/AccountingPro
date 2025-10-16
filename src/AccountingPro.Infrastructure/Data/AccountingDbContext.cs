@@ -19,6 +19,8 @@ public class AccountingDbContext : DbContext
     public DbSet<Customer> Customers { get; set; } = null!;
     public DbSet<Invoice> Invoices { get; set; } = null!;
     public DbSet<InvoiceItem> InvoiceItems { get; set; } = null!;
+    public DbSet<ProformaInvoice> ProformaInvoices { get; set; } = null!;
+    public DbSet<ProformaInvoiceItem> ProformaInvoiceItems { get; set; } = null!;
     public DbSet<Supplier> Suppliers { get; set; } = null!;
     public DbSet<Bill> Bills { get; set; } = null!;
     public DbSet<Product> Products { get; set; } = null!;
@@ -302,6 +304,58 @@ public class AccountingDbContext : DbContext
                 .HasOne(e => e.Invoice)
                 .WithMany(i => i.InvoiceItems)
                 .HasForeignKey(e => e.InvoiceId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ProformaInvoice configuration
+        modelBuilder.Entity<ProformaInvoice>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ProformaNumber).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.SubTotal).HasPrecision(18, 2);
+            entity.Property(e => e.TaxAmount).HasPrecision(18, 2);
+            entity.Property(e => e.DiscountAmount).HasPrecision(18, 2);
+            entity.Property(e => e.TotalAmount).HasPrecision(18, 2);
+            entity.Property(e => e.Notes).HasMaxLength(1000);
+            entity.Property(e => e.Terms).HasMaxLength(1000);
+
+            entity
+                .HasOne(e => e.Company)
+                .WithMany()
+                .HasForeignKey(e => e.CompanyId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity
+                .HasOne(e => e.Customer)
+                .WithMany()
+                .HasForeignKey(e => e.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity
+                .HasOne(e => e.ConvertedToInvoice)
+                .WithMany()
+                .HasForeignKey(e => e.ConvertedToInvoiceId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(e => new { e.CompanyId, e.ProformaNumber }).IsUnique();
+        });
+
+        // ProformaInvoiceItem configuration
+        modelBuilder.Entity<ProformaInvoiceItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.Quantity).HasPrecision(18, 4);
+            entity.Property(e => e.UnitPrice).HasPrecision(18, 2);
+            entity.Property(e => e.Discount).HasPrecision(18, 2);
+            entity.Property(e => e.TaxRate).HasPrecision(18, 4);
+            entity.Property(e => e.TaxAmount).HasPrecision(18, 2);
+            entity.Property(e => e.LineTotal).HasPrecision(18, 2);
+
+            entity
+                .HasOne(e => e.ProformaInvoice)
+                .WithMany(i => i.ProformaInvoiceItems)
+                .HasForeignKey(e => e.ProformaInvoiceId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

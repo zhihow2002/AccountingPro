@@ -49,6 +49,10 @@ builder.Services.AddScoped<
     AccountingPro.Infrastructure.Services.InvoiceService
 >();
 builder.Services.AddScoped<
+    AccountingPro.Application.Services.IProformaInvoiceService,
+    AccountingPro.Infrastructure.Services.ProformaInvoiceService
+>();
+builder.Services.AddScoped<
     AccountingPro.Application.Services.IBillService,
     AccountingPro.Infrastructure.Services.BillService
 >();
