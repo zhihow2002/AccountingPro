@@ -126,19 +126,19 @@
             @bind="toDate"
             @bind:after="FilterSales" />
     </div>
-        <div class="col-md-1">
-            <select
-                class="form-select form-select-lg"
-                @bind="itemsPerPage"
-                @bind:after="ResetPagination">
-                <option value="10">10</option>
-                <option value="25">25</option>
-                <option value="50">50</option>
-                <option value="100">100</option>
-            </select>
-        </div>
+    <div class="col-md-1">
+        <select
+            class="form-control"
+            @bind="itemsPerPage"
+            @bind:after="ResetPagination">
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+        </select>
     </div>
 </div>
+
 <!-- Cash Sales List -->
 <div class="card shadow-sm border-0">
     <div class="card-body p-0">

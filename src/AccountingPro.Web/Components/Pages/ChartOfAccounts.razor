@@ -25,14 +25,14 @@
     <ul class="nav nav-tabs mb-4" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link @(_activeTab == "accounts" ? "active" : "")" 
-                    @onclick="() => SetActiveTab(\"accounts\")" 
+                    @onclick='() => SetActiveTab("accounts")' 
                     type="button">
                 <i class="fas fa-list-ul me-2"></i>Accounts
             </button>
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link @(_activeTab == "opening" ? "active" : "")" 
-                    @onclick="() => SetActiveTab(\"opening\")" 
+                    @onclick='() => SetActiveTab("opening")' 
                     type="button">
                 <i class="fas fa-file-import me-2"></i>Opening Balance
             </button>
@@ -459,7 +459,7 @@
                                 <span>Save Opening Balances</span>
                             }
                         </button>
-                        <button type="button" class="btn btn-secondary btn-lg ms-2" @onclick="() => SetActiveTab(\"accounts\")">Cancel</button>
+                        <button type="button" class="btn btn-secondary btn-lg ms-2" @onclick='() => SetActiveTab("accounts")'>Cancel</button>
                     </div>
                 </EditForm>
             </div>
