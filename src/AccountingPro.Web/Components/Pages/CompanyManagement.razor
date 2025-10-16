@@ -5,6 +5,15 @@
 @inject NavigationManager Navigation
 <PageTitle>Company Management</PageTitle>
 <h1>Company Management</h1>
+
+@if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @ErrorMessage
+        <button type="button" class="btn-close" @onclick="() => ErrorMessage = string.Empty"></button>
+    </div>
+}
+
 <div class="row">
     <div class="col-md-8">
         <div class="card">
@@ -12,7 +21,16 @@
                 <h5>Companies</h5>
             </div>
             <div class="card-body">
-                @if (Companies.Any())
+                @if (IsLoading)
+                {
+                    <div class="text-center p-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading companies...</p>
+                    </div>
+                }
+                else if (Companies.Any())
                 {
                     <div class="table-responsive">
                         <table class="table table-striped">
@@ -160,15 +178,37 @@
     private bool IsEditing = false;
     private bool IsSubmitting = false;
     private string ErrorMessage = string.Empty;
+    private bool IsLoading = true;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadCompanies();
+        try
+        {
+            await LoadCompanies();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error loading companies: {ex.Message}";
+            Console.Error.WriteLine($"Error loading companies: {ex}");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
     private async Task LoadCompanies()
     {
-        Companies = await CompanyService.GetAllCompaniesAsync();
+        try
+        {
+            Companies = await CompanyService.GetAllCompaniesAsync();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error loading companies: {ex.Message}";
+            Console.Error.WriteLine($"Error loading companies: {ex}");
+            throw;
+        }
     }
 
     private async Task HandleValidSubmit()

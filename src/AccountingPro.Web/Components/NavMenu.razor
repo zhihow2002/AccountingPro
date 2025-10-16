@@ -12,8 +12,8 @@
         </button>
     </div>
 </div>
-<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
-    <nav class="flex-column">
+<div class="@NavMenuCssClass nav-scrollable">
+    <nav class="flex-column" @onclick="HandleNavClick">
         <div class="nav-item px-3">
             <NavLink
                 class="nav-link"
@@ -280,12 +280,21 @@
 
 @code
 {
-    private bool collapseNavMenu = false;
+    private bool collapseNavMenu = true;
 
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
 
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
+    }
+
+    private void HandleNavClick()
+    {
+        // On mobile, collapse the menu when a navigation link is clicked
+        if (collapseNavMenu == false)
+        {
+            collapseNavMenu = true;
+        }
     }
 }
