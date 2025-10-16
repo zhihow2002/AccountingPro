@@ -75,59 +75,53 @@
     </div>
 </div>
 <!-- Filters -->
-<div class="filter-section mb-4">
-    <div class="row g-3">
-        <div class="col-md-4">
-            <div class="input-group input-group-lg">
-                <span class="input-group-text bg-white">
-                    <i class="fas fa-search text-muted"></i>
-                </span>
-                <input
-                    type="text"
-                    class="form-control form-control-lg border-start-0"
-                    placeholder="Search by proforma number or customer..."
-                    @bind="searchTerm"
-                    @bind:event="oninput"
-                    @bind:after="FilterProformas" />
-            </div>
-        </div>
-        <div class="col-md-2">
-            <select
-                class="form-select form-select-lg"
-                @bind="selectedStatus"
-                @bind:after="FilterProformas">
-                <option value="">?? All Status</option>
-                <option value="@ProformaStatus.Draft">?? Draft</option>
-                <option value="@ProformaStatus.Sent">?? Sent</option>
-                <option value="@ProformaStatus.Accepted">? Accepted</option>
-                <option value="@ProformaStatus.Rejected">? Rejected</option>
-                <option value="@ProformaStatus.Converted">?? Converted</option>
-                <option value="@ProformaStatus.Expired">? Expired</option>
-                <option value="@ProformaStatus.Cancelled">?? Cancelled</option>
-            </select>
-        </div>
-        <div class="col-md-2">
-            <input
-                type="date"
-                class="form-select form-select-lg"
-                @bind="fromDate"
-                @bind:after="FilterProformas"
-                placeholder="From Date" />
-        </div>
-        <div class="col-md-2">
-            <input
-                type="date"
-                class="form-select form-select-lg"
-                @bind="toDate"
-                @bind:after="FilterProformas"
-                placeholder="To Date" />
-        </div>
-        <div class="col-md-2">
-            <select
-                class="form-select form-select-lg"
-                @bind="itemsPerPage"
-                @bind:after="ResetPagination">
-                <option value="10">10 per page</option>
+<div class="row mb-3">
+    <div class="col-md-4">
+        <input
+            type="text"
+            class="form-control"
+            placeholder="Search by proforma number or customer..."
+            @bind="searchTerm"
+            @bind:event="oninput"
+            @bind:after="FilterProformas" />
+    </div>
+    <div class="col-md-2">
+        <select
+            class="form-control"
+            @bind="selectedStatus"
+            @bind:after="FilterProformas">
+            <option value="">📋 All Status</option>
+            <option value="@ProformaStatus.Draft">📝 Draft</option>
+            <option value="@ProformaStatus.Sent">📤 Sent</option>
+            <option value="@ProformaStatus.Accepted">✅ Accepted</option>
+            <option value="@ProformaStatus.Rejected">❌ Rejected</option>
+            <option value="@ProformaStatus.Converted">🔄 Converted</option>
+            <option value="@ProformaStatus.Expired">⏰ Expired</option>
+            <option value="@ProformaStatus.Cancelled">🚫 Cancelled</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <input
+            type="date"
+            class="form-control"
+            @bind="fromDate"
+            @bind:after="FilterProformas"
+            placeholder="From Date" />
+    </div>
+    <div class="col-md-2">
+        <input
+            type="date"
+            class="form-control"
+            @bind="toDate"
+            @bind:after="FilterProformas"
+            placeholder="To Date" />
+    </div>
+    <div class="col-md-2">
+        <select
+            class="form-control"
+            @bind="itemsPerPage"
+            @bind:after="ResetPagination">
+            <option value="10">10 per page</option>
                 <option value="25">25 per page</option>
                 <option value="50">50 per page</option>
                 <option value="100">100 per page</option>

@@ -75,63 +75,57 @@
     </div>
 </div>
 <!-- Filters -->
-<div class="filter-section mb-4">
-    <div class="row g-3">
-        <div class="col-md-3">
-            <div class="input-group input-group-lg">
-                <span class="input-group-text bg-white">
-                    <i class="fas fa-search text-muted"></i>
-                </span>
-                <input
-                    type="text"
-                    class="form-control form-control-lg border-start-0"
-                    placeholder="Search by payment number or customer..."
-                    @bind="searchTerm"
-                    @bind:event="oninput"
-                    @bind:after="FilterSales" />
-            </div>
-        </div>
-        <div class="col-md-2">
-            <select
-                class="form-select form-select-lg"
-                @bind="selectedPaymentMethod"
-                @bind:after="FilterSales">
-                <option value="">?? All Methods</option>
-                <option value="@PaymentMethod.Cash">?? Cash</option>
-                <option value="@PaymentMethod.CreditCard">?? Credit Card</option>
-                <option value="@PaymentMethod.Check">?? Check</option>
-                <option value="@PaymentMethod.BankTransfer">?? Bank Transfer</option>
-                <option value="@PaymentMethod.Other">?? Other</option>
-            </select>
-        </div>
-        <div class="col-md-2">
-            <select
-                class="form-select form-select-lg"
-                @bind="selectedCustomer"
-                @bind:after="FilterSales">
-                <option value="">?? All Customers</option>
-                @foreach (var customer in GetUniqueCustomers())
-                {
-                    <option value="@customer.Key">
-                    @customer.Value
-                    </option>
-                }
-            </select>
-        </div>
-        <div class="col-md-2">
-            <input
-                type="date"
-                class="form-control form-control-lg"
-                @bind="fromDate"
-                @bind:after="FilterSales" />
-        </div>
-        <div class="col-md-2">
-            <input
-                type="date"
-                class="form-control form-control-lg"
-                @bind="toDate"
-                @bind:after="FilterSales" />
-        </div>
+<div class="row mb-3">
+    <div class="col-md-3">
+        <input
+            type="text"
+            class="form-control"
+            placeholder="Search by payment number or customer..."
+            @bind="searchTerm"
+            @bind:event="oninput"
+            @bind:after="FilterSales" />
+    </div>
+    <div class="col-md-2">
+        <select
+            class="form-control"
+            @bind="selectedPaymentMethod"
+            @bind:after="FilterSales">
+            <option value="">💳 All Methods</option>
+            <option value="@PaymentMethod.Cash">💵 Cash</option>
+            <option value="@PaymentMethod.CreditCard">💳 Credit Card</option>
+            <option value="@PaymentMethod.Check">📝 Check</option>
+            <option value="@PaymentMethod.BankTransfer">🏦 Bank Transfer</option>
+            <option value="@PaymentMethod.Other">📋 Other</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select
+            class="form-control"
+            @bind="selectedCustomer"
+            @bind:after="FilterSales">
+            <option value="">👥 All Customers</option>
+            @foreach (var customer in GetUniqueCustomers())
+            {
+                <option value="@customer.Key">
+                @customer.Value
+                </option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2">
+        <input
+            type="date"
+            class="form-control"
+            @bind="fromDate"
+            @bind:after="FilterSales" />
+    </div>
+    <div class="col-md-2">
+        <input
+            type="date"
+            class="form-control"
+            @bind="toDate"
+            @bind:after="FilterSales" />
+    </div>
         <div class="col-md-1">
             <select
                 class="form-select form-select-lg"
