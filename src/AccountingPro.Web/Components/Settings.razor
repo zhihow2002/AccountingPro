@@ -46,7 +46,7 @@
 
         <div class="actions">
             <button type="submit" class="btn btn-primary" disabled="@(_isSaving || _company is null)">
-                @_isSaving ? "Saving..." : "Save Changes"
+                @(_isSaving ? "Saving..." : "Save Changes")
             </button>
         </div>
     </EditForm>

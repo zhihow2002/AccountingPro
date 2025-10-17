@@ -2,51 +2,126 @@
 @using AccountingPro.Application.DTOs
 @using AccountingPro.Core.Enums
 
-<div class="page-header">
-    <h1 class="page-title">Product Inventory</h1>
+<PageTitle>Products & Services - AccountingPro</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Products & Services</h1>
     <button class="btn btn-primary" @onclick="OpenCreateModal">
-        <i class="fas fa-plus"></i> Add Product
+        <i class="fas fa-plus"></i> Add Product/Service
     </button>
 </div>
 
-<div class="card">
-    <div class="search-bar">
-        <input type="text" @bind="searchText" @oninput="FilterProducts" placeholder="Search products..." class="search-input" />
-        <select @bind="selectedType"  class="filter-select">
+<!-- Product Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon invoices">
+                <i class="fas fa-box"></i>
+            </div>
+            <div class="stat-content">
+                <h3>@products.Count</h3>
+                <p>Total Items</p>
+                <small>@products.Count(p => p.Type == "Product") Products, @products.Count(p => p.Type == "Service") Services</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon revenue">
+                <i class="fas fa-dollar-sign"></i>
+            </div>
+            <div class="stat-content">
+                <h3>@products.Where(p => p.Type == "Product").Sum(p => p.QuantityOnHand * p.UnitPrice).ToString("C")</h3>
+                <p>Inventory Value</p>
+                <small>Total product value</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon profit">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="stat-content">
+                <h3>@products.Count(p => p.Type == "Product" && p.QuantityOnHand < p.ReorderLevel)</h3>
+                <p>Low Stock Items</p>
+                <small class="text-warning">Need reordering</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon expenses">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="stat-content">
+                <h3>@products.Count(p => p.Status == "Active")</h3>
+                <p>Active Items</p>
+                <small>@products.Count(p => p.Status == "Inactive") inactive</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="row mb-3">
+    <div class="col-md-3">
+        <input type="text" class="form-control" placeholder="Search products..." @bind="searchText" @bind:event="oninput" />
+    </div>
+    <div class="col-md-2">
+        <select class="form-control" @bind="selectedType">
             <option value="">All Types</option>
             <option value="Product">Product</option>
             <option value="Service">Service</option>
         </select>
-        <select @bind="selectedStatus"  class="filter-select">
-            <option value="">All Statuses</option>
+    </div>
+    <div class="col-md-2">
+        <select class="form-control" @bind="selectedStatus">
+            <option value="">All Status</option>
             <option value="Active">Active</option>
             <option value="Inactive">Inactive</option>
         </select>
     </div>
+    <div class="col-md-2">
+        <select class="form-control" @bind="selectedCategory">
+            <option value="">All Categories</option>
+            @foreach (var category in GetUniqueCategories())
+            {
+                <option value="@category">@category</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-3 text-end">
+        <span class="text-muted">Showing @GetPaginatedProducts().Count() of @filteredProducts.Count items</span>
+    </div>
+</div>
 
-    <div class="table-container">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>SKU</th>
-                    <th>Name</th>
-                    <th>Type</th>
-                    <th>Category</th>
-                    <th>Quantity</th>
-                    <th>Unit Price</th>
-                    <th>Inventory Value</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var product in filteredProducts)
+<!-- Product List -->
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>SKU</th>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Category</th>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Inventory Value</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (GetPaginatedProducts().Any())
+            {
+                @foreach (var product in GetPaginatedProducts())
                 {
                     <tr>
-                        <td class="font-semibold">@product.SKU</td>
+                        <td><strong>@product.SKU</strong></td>
                         <td>@product.Name</td>
                         <td>
-                            <span class="badge @(product.Type == "Product" ? "badge-primary" : "badge-secondary")">
+                            <span class="badge badge-@(product.Type == "Product" ? "primary" : "secondary")">
                                 @product.Type
                             </span>
                         </td>
@@ -54,12 +129,12 @@
                         <td class="text-center">
                             @if (product.Type == "Product")
                             {
-                                <span class="@(product.QuantityOnHand < product.ReorderLevel ? "text-danger font-semibold" : "")">
+                                <span class="@(product.QuantityOnHand < product.ReorderLevel ? "text-danger fw-bold" : "")">
                                     @product.QuantityOnHand
                                 </span>
                                 @if (product.QuantityOnHand < product.ReorderLevel)
                                 {
-                                    <span class="reorder-warning" title="Below reorder level">⚠️</span>
+                                    <i class="fas fa-exclamation-triangle text-warning ms-1" title="Below reorder level"></i>
                                 }
                             }
                             else
@@ -67,11 +142,11 @@
                                 <span class="text-muted">N/A</span>
                             }
                         </td>
-                        <td class="text-right">$@product.UnitPrice.ToString("N2")</td>
-                        <td class="text-right">
+                        <td>@product.UnitPrice.ToString("C")</td>
+                        <td>
                             @if (product.Type == "Product")
                             {
-                                <span>$@((product.QuantityOnHand * product.UnitPrice).ToString("N2"))</span>
+                                <span>@((product.QuantityOnHand * product.UnitPrice).ToString("C"))</span>
                             }
                             else
                             {
@@ -79,13 +154,16 @@
                             }
                         </td>
                         <td>
-                            <span class="status-badge @GetStatusClass(product.Status)">
+                            <span class="badge badge-@(product.Status == "Active" ? "success" : "secondary")">
                                 @product.Status
                             </span>
                         </td>
                         <td>
-                            <div class="action-buttons">
-                                <button class="btn btn-sm btn-outline-primary" @onclick="() => EditProduct(product)" title="Edit">
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => ViewProduct(product)" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" @onclick="() => EditProduct(product)" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </button>
                                 @if (product.Type == "Product")
@@ -101,149 +179,289 @@
                         </td>
                     </tr>
                 }
-            </tbody>
-        </table>
-        
-        @if (!filteredProducts.Any())
-        {
-            <div class="empty-state">
-                <div class="empty-icon">📦</div>
-                <p class="empty-message">No products found</p>
-                <p class="empty-description">Add your first product to get started</p>
-            </div>
-        }
-    </div>
+            }
+            else
+            {
+                <tr>
+                    <td colspan="9" class="text-center text-muted">
+                        <div class="py-4">
+                            <i class="fas fa-box" style="font-size: 2rem; opacity: 0.3;"></i>
+                            <p class="mt-2">No products found</p>
+                            <button class="btn btn-primary" @onclick="OpenCreateModal">Add Your First Product</button>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
 </div>
 
-@if (showModal)
+<!-- Pagination -->
+@if (filteredProducts.Count > pageSize)
 {
-    <div class="modal-overlay" @onclick="CloseModal">
-        <div class="modal" @onclick:stopPropagation="true">
-            <div class="modal-header">
-                <h2>@(isEditing ? "Edit" : "Add") Product</h2>
-                <button class="modal-close" @onclick="CloseModal">×</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label>SKU *</label>
-                        <input type="text" @bind="currentProduct.SKU" class="form-input" required />
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <div>
+            <span class="text-muted">Page @currentPage of @TotalPages</span>
+        </div>
+        <nav>
+            <ul class="pagination mb-0">
+                <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                    <button class="page-link" @onclick="() => ChangePage(1)" disabled="@(currentPage == 1)">First</button>
+                </li>
+                <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                    <button class="page-link" @onclick="() => ChangePage(currentPage - 1)" disabled="@(currentPage == 1)">Previous</button>
+                </li>
+                @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(TotalPages, currentPage + 2); i++)
+                {
+                    var page = i;
+                    <li class="page-item @(currentPage == page ? "active" : "")">
+                        <button class="page-link" @onclick="() => ChangePage(page)">@(page)</button>
+                    </li>
+                }
+                <li class="page-item @(currentPage == TotalPages ? "disabled" : "")">
+                    <button class="page-link" @onclick="() => ChangePage(currentPage + 1)" disabled="@(currentPage == TotalPages)">Next</button>
+                </li>
+                <li class="page-item @(currentPage == TotalPages ? "disabled" : "")">
+                    <button class="page-link" @onclick="() => ChangePage(TotalPages)" disabled="@(currentPage == TotalPages)">Last</button>
+                </li>
+            </ul>
+        </nav>
+        <div>
+            <select class="form-select form-select-sm" style="width: auto;" @onchange="OnPageSizeChanged">
+                <option value="10">10 per page</option>
+                <option value="25">25 per page</option>
+                <option value="50">50 per page</option>
+                <option value="100">100 per page</option>
+            </select>
+        </div>
+    </div>
+}
+
+<!-- View Product Modal -->
+@if (showViewModal && selectedProduct != null)
+{
+    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Product Details</h5>
+                    <button type="button" class="btn-close" @onclick="CloseViewModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>SKU:</strong> @selectedProduct.SKU
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Status:</strong> 
+                            <span class="badge badge-@(selectedProduct.Status == "Active" ? "success" : "secondary")">
+                                @selectedProduct.Status
+                            </span>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Name *</label>
-                        <input type="text" @bind="currentProduct.Name" class="form-input" required />
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Name:</strong> @selectedProduct.Name
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Type:</strong> 
+                            <span class="badge badge-@(selectedProduct.Type == "Product" ? "primary" : "secondary")">
+                                @selectedProduct.Type
+                            </span>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Type *</label>
-                        <select @bind="currentProduct.Type" class="form-input"  required>
-                            <option value="">Select Type</option>
-                            <option value="Product">Product</option>
-                            <option value="Service">Service</option>
-                        </select>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Category:</strong> @selectedProduct.Category
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Unit Price:</strong> @selectedProduct.UnitPrice.ToString("C")
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Category</label>
-                        <input type="text" @bind="currentProduct.Category" class="form-input" />
-                    </div>
-                    <div class="form-group">
-                        <label>Description</label>
-                        <textarea @bind="currentProduct.Description" class="form-input" rows="3"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Unit Price *</label>
-                        <input type="number" step="0.01" @bind="currentProduct.UnitPrice" class="form-input" required />
-                    </div>
-                    
-                    @if (currentProduct.Type == "Product")
+                    @if (selectedProduct.Type == "Product")
                     {
-                        <div class="form-group">
-                            <label>Quantity on Hand</label>
-                            <input type="number" @bind="currentProduct.QuantityOnHand" class="form-input" />
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <strong>Quantity on Hand:</strong> 
+                                <span class="@(selectedProduct.QuantityOnHand < selectedProduct.ReorderLevel ? "text-danger fw-bold" : "")">
+                                    @selectedProduct.QuantityOnHand
+                                </span>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Reorder Level:</strong> @selectedProduct.ReorderLevel
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>Reorder Level</label>
-                            <input type="number" @bind="currentProduct.ReorderLevel" class="form-input" />
-                        </div>
-                        <div class="form-group">
-                            <label>Cost per Unit</label>
-                            <input type="number" step="0.01" @bind="currentProduct.CostPerUnit" class="form-input" />
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <strong>Cost per Unit:</strong> @selectedProduct.CostPerUnit.ToString("C")
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Inventory Value:</strong> @((selectedProduct.QuantityOnHand * selectedProduct.UnitPrice).ToString("C"))
+                            </div>
                         </div>
                     }
-                    
-                    <div class="form-group">
-                        <label>Tax Rate (%)</label>
-                        <input type="number" step="0.01" @bind="currentProduct.TaxRate" class="form-input" />
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <strong>Description:</strong><br />
+                            @(string.IsNullOrEmpty(selectedProduct.Description) ? "No description" : selectedProduct.Description)
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Status</label>
-                        <select @bind="currentProduct.Status" class="form-input">
-                            <option value="Active">Active</option>
-                            <option value="Inactive">Inactive</option>
-                        </select>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Tax Rate:</strong> @selectedProduct.TaxRate%
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
-                <button class="btn btn-primary" @onclick="SaveProduct" disabled="@(!IsValidProduct())">
-                    @(isEditing ? "Update" : "Save") Product
-                </button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseViewModal">Close</button>
+                    <button type="button" class="btn btn-primary" @onclick="() => { CloseViewModal(); EditProduct(selectedProduct); }">Edit</button>
+                </div>
             </div>
         </div>
     </div>
 }
 
-@if (showInventoryModal)
+<!-- Create/Edit Product Modal -->
+@if (showModal)
 {
-    <div class="modal-overlay" @onclick="CloseInventoryModal">
-        <div class="modal" @onclick:stopPropagation="true">
-            <div class="modal-header">
-                <h2>Adjust Inventory - @selectedProduct?.Name</h2>
-                <button class="modal-close" @onclick="CloseInventoryModal">×</button>
-            </div>
-            <div class="modal-body">
-                <div class="inventory-info">
-                    <p><strong>SKU:</strong> @selectedProduct?.SKU</p>
-                    <p><strong>Current Quantity:</strong> @selectedProduct?.QuantityOnHand</p>
-                    <p><strong>Reorder Level:</strong> @selectedProduct?.ReorderLevel</p>
+    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(isEditing ? "Edit" : "Add") Product/Service</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
                 </div>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label>Adjustment Type *</label>
-                        <select @bind="adjustmentType" class="form-input" required>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">SKU <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" @bind="currentProduct.SKU" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Type <span class="text-danger">*</span></label>
+                            <select class="form-control" @onchange="OnTypeChanged" required>
+                                <option value="">Select Type</option>
+                                <option value="Product" selected="@(currentProduct.Type == "Product")">Product</option>
+                                <option value="Service" selected="@(currentProduct.Type == "Service")">Service</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" @bind="currentProduct.Name" required />
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Category</label>
+                            <input type="text" class="form-control" @bind="currentProduct.Category" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Status</label>
+                            <select class="form-control" @bind="currentProduct.Status">
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" @bind="currentProduct.Description" rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Unit Price <span class="text-danger">*</span></label>
+                            <input type="number" step="0.01" class="form-control" @bind="currentProduct.UnitPrice" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tax Rate (%)</label>
+                            <input type="number" step="0.01" class="form-control" @bind="currentProduct.TaxRate" />
+                        </div>
+                    </div>
+                    @if (currentProduct.Type == "Product")
+                    {
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Cost per Unit</label>
+                                <input type="number" step="0.01" class="form-control" @bind="currentProduct.CostPerUnit" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Quantity on Hand</label>
+                                <input type="number" class="form-control" @bind="currentProduct.QuantityOnHand" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Reorder Level</label>
+                                <input type="number" class="form-control" @bind="currentProduct.ReorderLevel" />
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveProduct" disabled="@(!IsValidProduct())">
+                        <i class="fas fa-save"></i> @(isEditing ? "Update" : "Save")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Inventory Adjustment Modal -->
+@if (showInventoryModal && selectedProduct != null)
+{
+    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Adjust Inventory - @selectedProduct.Name</h5>
+                    <button type="button" class="btn-close" @onclick="CloseInventoryModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <p><strong>SKU:</strong> @selectedProduct.SKU</p>
+                        <p><strong>Current Quantity:</strong> @selectedProduct.QuantityOnHand</p>
+                        <p><strong>Reorder Level:</strong> @selectedProduct.ReorderLevel</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Adjustment Type <span class="text-danger">*</span></label>
+                        <select class="form-control" @bind="adjustmentType">
                             <option value="">Select Type</option>
-                            <option value="Add">Add Inventory</option>
-                            <option value="Remove">Remove Inventory</option>
-                            <option value="Set">Set Exact Quantity</option>
+                            <option value="Add">Add Stock</option>
+                            <option value="Remove">Remove Stock</option>
+                            <option value="Set">Set to Specific Value</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label>
-                            @(adjustmentType == "Set" ? "New Quantity" : "Adjustment Quantity") *
+                    <div class="mb-3">
+                        <label class="form-label">
+                            @(adjustmentType == "Set" ? "New Quantity" : "Adjustment Quantity") <span class="text-danger">*</span>
                         </label>
-                        <input type="number" @bind="adjustmentQuantity" class="form-input" required />
+                        <input type="number" class="form-control" @bind="adjustmentQuantity" min="0" />
                     </div>
-                    <div class="form-group col-span-2">
-                        <label>Reason</label>
-                        <textarea @bind="adjustmentReason" class="form-input" rows="3" placeholder="Reason for inventory adjustment..."></textarea>
+                    @if (!string.IsNullOrEmpty(adjustmentType) && adjustmentQuantity > 0)
+                    {
+                        <div class="alert alert-info">
+                            <strong>Preview:</strong><br />
+                            Current: @selectedProduct.QuantityOnHand<br />
+                            New: @GetNewQuantity()<br />
+                            Change: @GetQuantityChange()
+                        </div>
+                    }
+                    <div class="mb-3">
+                        <label class="form-label">Reason</label>
+                        <textarea class="form-control" @bind="adjustmentReason" rows="3" placeholder="Reason for inventory adjustment..."></textarea>
                     </div>
                 </div>
-                
-                @if (adjustmentType != "" && adjustmentQuantity > 0)
-                {
-                    <div class="adjustment-preview">
-                        <h4>Preview:</h4>
-                        <p>Current Quantity: @selectedProduct?.QuantityOnHand</p>
-                        <p>New Quantity: @GetNewQuantity()</p>
-                        <p>Change: @GetQuantityChange()</p>
-                    </div>
-                }
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" @onclick="CloseInventoryModal">Cancel</button>
-                <button class="btn btn-primary" @onclick="SaveInventoryAdjustment" disabled="@(string.IsNullOrEmpty(adjustmentType) || adjustmentQuantity <= 0)">
-                    Apply Adjustment
-                </button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseInventoryModal">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveInventoryAdjustment" 
+                            disabled="@(string.IsNullOrEmpty(adjustmentType) || adjustmentQuantity <= 0)">
+                        <i class="fas fa-check"></i> Apply Adjustment
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -255,16 +473,65 @@
     private ProductDto currentProduct = new();
     private ProductDto? selectedProduct;
     private bool showModal = false;
+    private bool showViewModal = false;
     private bool showInventoryModal = false;
     private bool isEditing = false;
+    
     private string searchText = "";
-    private string selectedType = "";
-    private string selectedStatus = "";
+    private string _selectedType = "";
+    private string selectedType
+    {
+        get => _selectedType;
+        set
+        {
+            _selectedType = value;
+            FilterProducts();
+        }
+    }
+    
+    private string _selectedStatus = "";
+    private string selectedStatus
+    {
+        get => _selectedStatus;
+        set
+        {
+            _selectedStatus = value;
+            FilterProducts();
+        }
+    }
+    
+    private string _selectedCategory = "";
+    private string selectedCategory
+    {
+        get => _selectedCategory;
+        set
+        {
+            _selectedCategory = value;
+            FilterProducts();
+        }
+    }
+
+    // Pagination
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private int TotalPages => (int)Math.Ceiling(filteredProducts.Count / (double)pageSize);
 
     // Inventory adjustment fields
     private string adjustmentType = "";
     private int adjustmentQuantity = 0;
     private string adjustmentReason = "";
+
+    // Statistics
+    private int TotalItems => products.Count;
+    private int TotalProducts => products.Count(p => p.Type == "Product");
+    private int TotalServices => products.Count(p => p.Type == "Service");
+    private decimal TotalInventoryValue => products
+        .Where(p => p.Type == "Product")
+        .Sum(p => p.QuantityOnHand * p.UnitPrice);
+    private int LowStockCount => products
+        .Where(p => p.Type == "Product" && p.QuantityOnHand < p.ReorderLevel)
+        .Count();
+    private int ActiveItemsCount => products.Count(p => p.Status == "Active");
 
     protected override async Task OnInitializedAsync()
     {
@@ -278,7 +545,7 @@
                 Name = "Dell Latitude 5520",
                 Type = "Product",
                 Category = "Electronics",
-                Description = "Business laptop with 16GB RAM",
+                Description = "Business laptop with 16GB RAM, 512GB SSD, Intel i7",
                 UnitPrice = 1299.99m,
                 CostPerUnit = 899.99m,
                 QuantityOnHand = 15,
@@ -289,11 +556,11 @@
             new ProductDto
             {
                 Id = 2,
-                SKU = "SVC-CONS",
+                SKU = "SVC-CONS-001",
                 Name = "IT Consulting",
                 Type = "Service",
                 Category = "Consulting",
-                Description = "Technical consulting services",
+                Description = "Technical consulting services - per hour",
                 UnitPrice = 150.00m,
                 CostPerUnit = 0,
                 QuantityOnHand = 0,
@@ -308,7 +575,7 @@
                 Name = "Wireless Mouse",
                 Type = "Product",
                 Category = "Electronics",
-                Description = "Ergonomic wireless mouse",
+                Description = "Ergonomic wireless mouse with USB receiver",
                 UnitPrice = 29.99m,
                 CostPerUnit = 15.99m,
                 QuantityOnHand = 3,
@@ -323,11 +590,101 @@
                 Name = "Standing Desk",
                 Type = "Product",
                 Category = "Furniture",
-                Description = "Adjustable height standing desk",
+                Description = "Adjustable height standing desk - electric",
                 UnitPrice = 599.99m,
                 CostPerUnit = 399.99m,
                 QuantityOnHand = 8,
                 ReorderLevel = 3,
+                TaxRate = 8.25m,
+                Status = "Active"
+            },
+            new ProductDto
+            {
+                Id = 5,
+                SKU = "CHAIR-001",
+                Name = "Ergonomic Office Chair",
+                Type = "Product",
+                Category = "Furniture",
+                Description = "Mesh back office chair with lumbar support",
+                UnitPrice = 299.99m,
+                CostPerUnit = 179.99m,
+                QuantityOnHand = 12,
+                ReorderLevel = 6,
+                TaxRate = 8.25m,
+                Status = "Active"
+            },
+            new ProductDto
+            {
+                Id = 6,
+                SKU = "SVC-TRAIN-001",
+                Name = "Software Training",
+                Type = "Service",
+                Category = "Training",
+                Description = "Custom software training session - per day",
+                UnitPrice = 800.00m,
+                CostPerUnit = 0,
+                QuantityOnHand = 0,
+                ReorderLevel = 0,
+                TaxRate = 0.00m,
+                Status = "Active"
+            },
+            new ProductDto
+            {
+                Id = 7,
+                SKU = "MON-001",
+                Name = "27-inch Monitor",
+                Type = "Product",
+                Category = "Electronics",
+                Description = "4K UHD monitor with USB-C connectivity",
+                UnitPrice = 449.99m,
+                CostPerUnit = 299.99m,
+                QuantityOnHand = 2,
+                ReorderLevel = 8,
+                TaxRate = 8.25m,
+                Status = "Active"
+            },
+            new ProductDto
+            {
+                Id = 8,
+                SKU = "KEY-001",
+                Name = "Mechanical Keyboard",
+                Type = "Product",
+                Category = "Electronics",
+                Description = "RGB mechanical keyboard - Cherry MX switches",
+                UnitPrice = 129.99m,
+                CostPerUnit = 79.99m,
+                QuantityOnHand = 18,
+                ReorderLevel = 10,
+                TaxRate = 8.25m,
+                Status = "Active"
+            },
+            new ProductDto
+            {
+                Id = 9,
+                SKU = "SVC-SUPP-001",
+                Name = "Technical Support",
+                Type = "Service",
+                Category = "Support",
+                Description = "Monthly technical support subscription",
+                UnitPrice = 500.00m,
+                CostPerUnit = 0,
+                QuantityOnHand = 0,
+                ReorderLevel = 0,
+                TaxRate = 0.00m,
+                Status = "Active"
+            },
+            new ProductDto
+            {
+                Id = 10,
+                SKU = "CABLE-001",
+                Name = "USB-C Cable",
+                Type = "Product",
+                Category = "Accessories",
+                Description = "USB-C to USB-C cable - 6ft",
+                UnitPrice = 19.99m,
+                CostPerUnit = 8.99m,
+                QuantityOnHand = 45,
+                ReorderLevel = 20,
                 TaxRate = 8.25m,
                 Status = "Active"
             }
@@ -336,9 +693,52 @@
         filteredProducts = products.ToList();
     }
 
+    private IEnumerable<ProductDto> GetPaginatedProducts()
+    {
+        return filteredProducts
+            .Skip((currentPage - 1) * pageSize)
+            .Take(pageSize);
+    }
+
+    private void ChangePage(int page)
+    {
+        if (page >= 1 && page <= TotalPages)
+        {
+            currentPage = page;
+        }
+    }
+
+    private void OnPageSizeChanged(ChangeEventArgs e)
+    {
+        pageSize = int.Parse(e.Value?.ToString() ?? "10");
+        currentPage = 1;
+    }
+
+    private List<string> GetUniqueCategories()
+    {
+        return products
+            .Where(p => !string.IsNullOrEmpty(p.Category))
+            .Select(p => p.Category)
+            .Distinct()
+            .OrderBy(c => c)
+            .ToList();
+    }
+
+    private void ViewProduct(ProductDto product)
+    {
+        selectedProduct = product;
+        showViewModal = true;
+    }
+
+    private void CloseViewModal()
+    {
+        showViewModal = false;
+        selectedProduct = null;
+    }
+
     private void OpenCreateModal()
     {
-        currentProduct = new ProductDto { Status = "Active", Type = "Product" };
+        currentProduct = new ProductDto { Status = "Active", Type = "Product", TaxRate = 8.25m };
         isEditing = false;
         showModal = true;
     }
@@ -505,8 +905,12 @@
              p.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
              p.Category?.Contains(searchText, StringComparison.OrdinalIgnoreCase) == true) &&
             (string.IsNullOrEmpty(selectedType) || p.Type == selectedType) &&
-            (string.IsNullOrEmpty(selectedStatus) || p.Status == selectedStatus)
+            (string.IsNullOrEmpty(selectedStatus) || p.Status == selectedStatus) &&
+            (string.IsNullOrEmpty(selectedCategory) || p.Category == selectedCategory)
         ).ToList();
+        
+        // Reset to first page when filtering
+        currentPage = 1;
     }
 
     private string GetStatusClass(string status)
