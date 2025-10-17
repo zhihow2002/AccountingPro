@@ -15,7 +15,7 @@
         <div class="filters">
             <InputDate @bind-Value="_asOfDate" class="form-control" />
             <button class="btn btn-primary" @onclick="LoadTrialBalance" disabled="@_isLoading">
-                @_isLoading ? "Loading..." : "Refresh"
+                @(_isLoading ? "Loading..." : "Refresh")
             </button>
         </div>
     </header>
