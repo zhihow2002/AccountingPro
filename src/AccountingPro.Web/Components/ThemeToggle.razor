@@ -1,0 +1,52 @@
+@inject IJSRuntime JS
+
+<button class="btn btn-sm theme-toggle-btn" @onclick="ToggleTheme" title="Toggle theme">
+    <i class="fas @(isDarkMode ? "fa-sun" : "fa-moon")"></i>
+</button>
+
+@code {
+    private bool isDarkMode = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            isDarkMode = await JS.InvokeAsync<bool>("getTheme");
+            StateHasChanged();
+        }
+    }
+
+    private async Task ToggleTheme()
+    {
+        isDarkMode = !isDarkMode;
+        await JS.InvokeVoidAsync("setTheme", isDarkMode);
+    }
+}
+
+<style>
+    .theme-toggle-btn {
+        background: transparent;
+        border: 1px solid rgba(0,0,0,0.1);
+        color: inherit;
+        border-radius: 8px;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }
+
+    .theme-toggle-btn:hover {
+        background: rgba(0,0,0,0.05);
+        transform: scale(1.1);
+    }
+
+    [data-theme="dark"] .theme-toggle-btn {
+        border-color: rgba(255,255,255,0.2);
+    }
+
+    [data-theme="dark"] .theme-toggle-btn:hover {
+        background: rgba(255,255,255,0.1);
+    }
+</style>

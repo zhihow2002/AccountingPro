@@ -152,11 +152,9 @@ else if (!_payments.Any())
 }
 else
 {
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
                         <tr>
                             <th>Date</th>
                             <th>Payment #</th>
@@ -188,18 +186,16 @@ else
                                 @payment.InvoiceNumber
                                 </td>
                                 <td>
-                                    <span class="badge bg-@GetMethodColor(payment.PaymentMethod)">
-                                    @payment.PaymentMethod.ToString()
+                                    <span class="badge badge-@GetMethodColor(payment.PaymentMethod)">
+                                        @payment.PaymentMethod.ToString()
                                     </span>
                                 </td>
-                                <td class="text-end">
-                                    <strong>
-                                    @payment.Amount.ToString("C")
-                                    </strong>
+                                <td>
+                                    <strong>@payment.Amount.ToString("C")</strong>
                                 </td>
                                 <td>
-                                    <span class="badge bg-@GetStatusColor(payment.Status)">
-                                    @payment.Status.ToString()
+                                    <span class="badge badge-@GetStatusColor(payment.Status)">
+                                        @payment.Status.ToString()
                                     </span>
                                 </td>
                                 <td>
@@ -224,8 +220,6 @@ else
                     </tbody>
                 </table>
             </div>
-        </div>
-    </div>
     <!-- Pagination -->
     @if (totalPages > 1)
     {

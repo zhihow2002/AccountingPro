@@ -1,4 +1,4 @@
-<div class="top-row ps-3 navbar navbar-dark">
+<div class="top-row ps-3 navbar">
     <div class="container-fluid">
         <a class="navbar-brand" href="">
             <i class="fas fa-calculator me-2"></i>
@@ -170,15 +170,23 @@
     </nav>
 </div>
 <style>
+    .top-row {
+        background: linear-gradient(135deg, var(--sidebar-bg-start) 0%, var(--sidebar-bg-end) 100%) !important;
+    }
+
     .navbar-brand {
         font-size: 1.5rem;
         font-weight: 700;
-        color: white !important;
+        color: var(--sidebar-text) !important;
         text-decoration: none;
     }
 
     .navbar-brand i {
         color: #3498db;
+    }
+
+    .navbar-brand strong {
+        color: var(--sidebar-text) !important;
     }
 
     .nav-section {
@@ -189,14 +197,15 @@
         font-size: 0.85rem;
         font-weight: 600;
         text-transform: uppercase;
-        color: #bdc3c7;
+        color: var(--text-secondary);
         padding: 10px 0 5px 1rem;
         margin-bottom: 5px;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
+        border-bottom: 1px solid var(--border-color);
+        opacity: 0.8;
     }
 
     .nav-link {
-        color: #ecf0f1 !important;
+        color: var(--sidebar-text) !important;
         padding: 12px 1rem;
         margin: 2px 0;
         border-radius: 8px;
@@ -204,24 +213,32 @@
         text-decoration: none;
         display: flex;
         align-items: center;
+        font-weight: 500;
     }
 
     .nav-link:hover {
-        background: rgba(52, 152, 219, 0.2);
-        color: white !important;
+        background: var(--sidebar-hover);
+        color: var(--sidebar-text) !important;
         transform: translateX(5px);
     }
 
     .nav-link.active {
-        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
         color: white !important;
+        font-weight: 600;
         box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+    }
+    
+    .nav-link.active i {
+        color: white !important;
+        opacity: 1 !important;
     }
 
     .nav-link i {
         width: 20px;
         text-align: center;
-        opacity: 0.8;
+        opacity: 1;
+        color: var(--sidebar-text) !important;
     }
 
     .nav-scrollable {
