@@ -140,99 +140,54 @@
 </div>
 
 <!-- Cash Sales List -->
-<div class="card shadow-sm border-0">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th class="ps-4">
-                            <i class="fas fa-calendar me-2"></i>
-                            Date
-                        </th>
-                        <th>
-                            <i class="fas fa-hashtag me-2"></i>
-                            Payment #
-                        </th>
-                        <th>
-                            <i class="fas fa-user me-2"></i>
-                            Customer
-                        </th>
-                        <th>
-                            <i class="fas fa-credit-card me-2"></i>
-                            Method
-                        </th>
-                        <th>
-                            <i class="fas fa-tag me-2"></i>
-                            Reference
-                        </th>
-                        <th>
-                            <i class="fas fa-dollar-sign me-2"></i>
-                            Amount
-                        </th>
-                        <th>
-                            <i class="fas fa-info-circle me-2"></i>
-                            Status
-                        </th>
-                        <th class="pe-4">
-                            <i class="fas fa-cog me-2"></i>
-                            Actions
-                        </th>
-                    </tr>
-                </thead>
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Payment #</th>
+                <th>Customer</th>
+                <th>Method</th>
+                <th>Reference</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
                 <tbody>
                     @if (paginatedSales.Any())
                     {
                         @foreach (var sale in paginatedSales)
                         {
-                            <tr class="invoice-row">
-                                <td class="ps-4">
-                                    <div class="fw-medium">
+                            <tr>
+                                <td>
                                     @sale.PaymentDate.ToString("MMM dd, yyyy")
-                                    </div>
-                                    <small class="text-muted">
-                                    @sale.PaymentDate.ToString("hh:mm tt")
-                                    </small>
+                                    <br />
+                                    <small class="text-muted">@sale.PaymentDate.ToString("hh:mm tt")</small>
                                 </td>
                                 <td>
-                                    <strong class="text-primary">
-                                    @sale.PaymentNumber
-                                    </strong>
+                                    <strong>@sale.PaymentNumber</strong>
                                 </td>
                                 <td>
-                                    <div class="d-flex align-items-center">
-                                        <div class="customer-avatar me-2">
-                                            <i class="fas fa-user-circle fa-2x text-muted"></i>
-                                        </div>
-                                        <div>
-                                            <div class="fw-medium">
-                                                @(sale.CustomerName ?? "Walk-in Customer")
-                                            </div>
-                                        </div>
-                                    </div>
+                                    @(sale.CustomerName ?? "Walk-in Customer")
                                 </td>
                                 <td>
-                                    <span class="badge bg-@GetMethodColor(sale.PaymentMethod) rounded-pill px-3">
-                                    @sale.PaymentMethod
+                                    <span class="badge badge-@GetMethodColor(sale.PaymentMethod)">
+                                        @sale.PaymentMethod
                                     </span>
                                 </td>
                                 <td>
-                                    <span class="text-muted">
-                                        @(sale.Reference ?? "-")
-                                    </span>
+                                    @(sale.Reference ?? "-")
                                 </td>
                                 <td>
-                                    <strong class="text-success fs-5">
-                                    @sale.Amount.ToString("C")
-                                    </strong>
+                                    <strong>@sale.Amount.ToString("C")</strong>
                                 </td>
                                 <td>
-                                    <span class="badge bg-@GetStatusColor(sale.Status) rounded-pill px-3">
-                                        <i class="fas fa-check-circle me-1"></i>
+                                    <span class="badge badge-@GetStatusColor(sale.Status)">
                                         @sale.Status
                                     </span>
                                 </td>
-                                <td class="pe-4">
+                                <td>
                                     <div class="btn-group" role="group">
                                         <button
                                             class="btn btn-sm btn-outline-primary"
@@ -263,19 +218,13 @@
                     else
                     {
                         <tr>
-                            <td colspan="8" class="text-center py-5">
-                                <div class="empty-state">
-                                    <i class="fas fa-cash-register fa-4x mb-3 text-muted" style="opacity: 0.3;"></i>
-                                    <h4 class="text-muted">No Cash Sales Found</h4>
-                                    <p class="text-muted mb-4">
-                                        @(searchTerm != "" || selectedPaymentMethod != "" || selectedCustomer != "" ? "Try adjusting your filters" : "Get started by creating your first cash sale")
-                                    </p>
+                            <td colspan="8" class="text-center text-muted">
+                                <div class="py-4">
+                                    <i class="fas fa-cash-register" style="font-size: 2rem; opacity: 0.3;"></i>
+                                    <p class="mt-2">No cash sales found</p>
                                     @if (searchTerm == "" && selectedPaymentMethod == "" && selectedCustomer == "")
                                     {
-                                        <a href="/sales/cash/create" class="btn btn-primary btn-lg">
-                                            <i class="fas fa-plus-circle me-2"></i>
-                                            Create First Cash Sale
-                                        </a>
+                                        <a href="/sales/cash/create" class="btn btn-primary">Create Your First Cash Sale</a>
                                     }
                                 </div>
                             </td>
@@ -284,8 +233,6 @@
                 </tbody>
             </table>
         </div>
-    </div>
-</div>
 <!-- Pagination -->
 @if (totalPages > 1)
 {

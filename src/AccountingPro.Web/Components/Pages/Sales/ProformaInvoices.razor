@@ -126,82 +126,48 @@
 </div>
 
 <!-- Proforma Invoices Table -->
-<div class="card shadow-sm border-0">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th class="ps-4">
-                            <i class="fas fa-hashtag me-2"></i>
-                            Proforma #
-                        </th>
-                        <th>
-                            <i class="fas fa-user me-2"></i>
-                            Customer
-                        </th>
-                        <th>
-                            <i class="fas fa-calendar me-2"></i>
-                            Issue Date
-                        </th>
-                        <th>
-                            <i class="fas fa-clock me-2"></i>
-                            Valid Until
-                        </th>
-                        <th>
-                            <i class="fas fa-dollar-sign me-2"></i>
-                            Amount
-                        </th>
-                        <th>
-                            <i class="fas fa-info-circle me-2"></i>
-                            Status
-                        </th>
-                        <th class="text-center">
-                            <i class="fas fa-cog me-2"></i>
-                            Actions
-                        </th>
-                    </tr>
-                </thead>
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Proforma #</th>
+                <th>Customer</th>
+                <th>Issue Date</th>
+                <th>Valid Until</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
                 <tbody>
                     @if (paginatedProformas.Any())
                     {
                         @foreach (var proforma in paginatedProformas)
                         {
                             <tr>
-                                <td class="ps-4">
-                                    <strong class="text-primary">
-                                    @proforma.ProformaNumber
-                                    </strong>
-                                </td>
                                 <td>
-                                @proforma.CustomerName
+                                    <strong>@proforma.ProformaNumber</strong>
                                 </td>
-                                <td>
-                                @proforma.IssueDate.ToString("MMM dd, yyyy")
-                                </td>
+                                <td>@proforma.CustomerName</td>
+                                <td>@proforma.IssueDate.ToString("MMM dd, yyyy")</td>
                                 <td>
                                     @if (proforma.ValidUntil < DateTime.Today && proforma.Status != ProformaStatus.Converted)
                                     {
-                                        <span class="badge bg-danger">
-                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                        <span class="text-danger">
                                             @proforma.ValidUntil.ToString("MMM dd, yyyy")
                                         </span>
                                     }
                                     else
                                     {
-                                        <span>
-                                        @proforma.ValidUntil.ToString("MMM dd, yyyy")
-                                        </span>
+                                        <span>@proforma.ValidUntil.ToString("MMM dd, yyyy")</span>
                                     }
                                 </td>
                                 <td>
-                                    <strong class="text-success">
-                                    @proforma.TotalAmount.ToString("C")
-                                    </strong>
+                                    <strong>@proforma.TotalAmount.ToString("C")</strong>
                                 </td>
                                 <td>
-                                    <span class="badge bg-@GetStatusColor(proforma.Status) fs-6 px-3 py-2">
-                                    @proforma.Status
+                                    <span class="badge badge-@GetStatusColor(proforma.Status)">
+                                        @proforma.Status
                                     </span>
                                 </td>
                                 <td>
@@ -251,21 +217,13 @@
                     {
                         <tr>
                             <td colspan="7" class="text-center text-muted">
-                                <div class="py-5">
-                                    <div class="empty-state">
-                                        <i class="fas fa-file-contract fa-4x mb-3 text-muted" style="opacity: 0.3;"></i>
-                                        <h4 class="text-muted">No Proforma Invoices Found</h4>
-                                        <p class="text-muted mb-4">
-                                            @(searchTerm != "" || selectedStatus != "" ? "Try adjusting your filters" : "Get started by creating your first proforma invoice")
-                                        </p>
-                                        @if (searchTerm == "" && selectedStatus == "")
-                                        {
-                                            <button class="btn btn-primary btn-lg" @onclick="ShowCreateModal">
-                                                <i class="fas fa-plus-circle me-2"></i>
-                                                Create Proforma Invoice
-                                            </button>
-                                        }
-                                    </div>
+                                <div class="py-4">
+                                    <i class="fas fa-file-contract" style="font-size: 2rem; opacity: 0.3;"></i>
+                                    <p class="mt-2">No proforma invoices found</p>
+                                    @if (searchTerm == "" && selectedStatus == "")
+                                    {
+                                        <button class="btn btn-primary" @onclick="ShowCreateModal">Create Your First Proforma Invoice</button>
+                                    }
                                 </div>
                             </td>
                         </tr>
@@ -273,8 +231,6 @@
                 </tbody>
             </table>
         </div>
-    </div>
-</div>
 <!-- Pagination -->
 @if (totalPages > 1)
 {
