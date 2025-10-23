@@ -109,3 +109,9 @@ public enum ProformaStatus
     Expired = 6,
     Cancelled = 7
 }
+
+public enum InvoiceTemplate
+{
+    ModernTemplate = 1,
+    ClassicTemplate = 2
+}

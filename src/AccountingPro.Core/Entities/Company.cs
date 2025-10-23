@@ -1,5 +1,4 @@
 using AccountingPro.Core.Common;
-using System.ComponentModel.DataAnnotations;
 
 namespace AccountingPro.Core.Entities;
 
@@ -29,6 +28,13 @@ public class Company : BaseEntity
 
     public bool IsActive { get; set; } = true;
     public bool EnableInvoiceTax { get; set; } = true;
+    
+    // Invoice Template Settings
+    [StringLength(50, ErrorMessage = "Invoice template name cannot exceed 50 characters")]
+    public string InvoiceTemplateName { get; set; } = "ModernTemplate"; // Default template
+    
+    [StringLength(500, ErrorMessage = "Logo URL cannot exceed 500 characters")]
+    public string? LogoUrl { get; set; }
 
     // Navigation properties
     public virtual ICollection<Account> Accounts { get; set; } = new List<Account>();

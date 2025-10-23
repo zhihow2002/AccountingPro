@@ -1,0 +1,518 @@
+@using AccountingPro.Core.Enums
+@model AccountingPro.Application.DTOs.InvoicePrintDto
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice #@Model.InvoiceNumber</title>
+    <style>
+        @@page {
+            size: A4;
+            margin: 0;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 11pt;
+            line-height: 1.5;
+            color: #000;
+            background: #fff;
+        }
+        
+        .invoice-container {
+            max-width: 210mm;
+            margin: 0 auto;
+            padding: 20mm;
+            background: white;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 30px 0;
+            border: 3px double #000;
+        }
+        
+        .company-name {
+            font-size: 32pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+        }
+        
+        .company-details {
+            font-size: 10pt;
+            color: #333;
+            line-height: 1.8;
+        }
+        
+        .invoice-title {
+            text-align: center;
+            font-size: 24pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin: 30px 0;
+            padding: 15px 0;
+            border-top: 2px solid #000;
+            border-bottom: 2px solid #000;
+        }
+        
+        .invoice-info-grid {
+            display: table;
+            width: 100%;
+            margin-bottom: 30px;
+        }
+        
+        .invoice-info-row {
+            display: table-row;
+        }
+        
+        .invoice-info-cell {
+            display: table-cell;
+            padding: 10px;
+            border: 1px solid #000;
+            vertical-align: top;
+        }
+        
+        .invoice-info-cell strong {
+            display: block;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            font-size: 9pt;
+            letter-spacing: 1px;
+        }
+        
+        .address-section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        
+        .address-box {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #000;
+            min-height: 150px;
+        }
+        
+        .address-box:last-child {
+            margin-left: 20px;
+        }
+        
+        .address-box h3 {
+            font-size: 11pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #000;
+            letter-spacing: 1px;
+        }
+        
+        .address-box p {
+            margin-bottom: 5px;
+            font-size: 10pt;
+        }
+        
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            border: 2px solid #000;
+        }
+        
+        .items-table th,
+        .items-table td {
+            padding: 10px;
+            border: 1px solid #000;
+            text-align: left;
+            font-size: 10pt;
+        }
+        
+        .items-table thead {
+            background: #f0f0f0;
+        }
+        
+        .items-table th {
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 9pt;
+            letter-spacing: 0.5px;
+        }
+        
+        .items-table th:last-child,
+        .items-table td:last-child {
+            text-align: right;
+        }
+        
+        .items-table .text-center {
+            text-align: center;
+        }
+        
+        .items-table .text-right {
+            text-align: right;
+        }
+        
+        .items-table .description {
+            font-size: 9pt;
+            color: #555;
+            font-style: italic;
+            margin-top: 3px;
+        }
+        
+        .totals-table {
+            width: 350px;
+            margin-left: auto;
+            border-collapse: collapse;
+            border: 2px solid #000;
+        }
+        
+        .totals-table td {
+            padding: 10px 15px;
+            border: 1px solid #000;
+            font-size: 11pt;
+        }
+        
+        .totals-table .label {
+            font-weight: bold;
+            text-align: right;
+            text-transform: uppercase;
+            font-size: 10pt;
+        }
+        
+        .totals-table .amount {
+            text-align: right;
+            width: 150px;
+        }
+        
+        .totals-table .total-row {
+            background: #000;
+            color: #fff;
+            font-weight: bold;
+            font-size: 13pt;
+        }
+        
+        .notes-section {
+            margin: 30px 0;
+            padding: 15px;
+            border: 1px solid #000;
+            background: #fafafa;
+        }
+        
+        .notes-section h3 {
+            font-size: 11pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+        
+        .notes-section p {
+            font-size: 10pt;
+            white-space: pre-wrap;
+        }
+        
+        .terms-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px dashed #000;
+        }
+        
+        .terms-section h3 {
+            font-size: 10pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        
+        .terms-section p {
+            font-size: 9pt;
+            line-height: 1.6;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #000;
+            text-align: center;
+            font-size: 9pt;
+        }
+        
+        .footer p {
+            margin-bottom: 5px;
+        }
+        
+        .signature-section {
+            display: flex;
+            justify-content: space-between;
+            margin: 40px 0 20px 0;
+        }
+        
+        .signature-box {
+            flex: 1;
+            text-align: center;
+        }
+        
+        .signature-line {
+            border-top: 1px solid #000;
+            margin-top: 60px;
+            padding-top: 10px;
+            font-size: 9pt;
+            text-transform: uppercase;
+        }
+        
+        .status-stamp {
+            position: absolute;
+            top: 180mm;
+            right: 25mm;
+            padding: 10px 30px;
+            border: 3px solid;
+            transform: rotate(-15deg);
+            font-size: 18pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .status-stamp.paid {
+            color: #28a745;
+            border-color: #28a745;
+        }
+        
+        .status-stamp.pending {
+            color: #ffc107;
+            border-color: #ffc107;
+        }
+        
+        .status-stamp.overdue {
+            color: #dc3545;
+            border-color: #dc3545;
+        }
+        
+        @@media print {
+            .invoice-container {
+                padding: 15mm;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="invoice-container">
+        <!-- Status Stamp -->
+        @if (Model.Status == InvoiceStatus.Paid)
+        {
+            <div class="status-stamp paid">PAID</div>
+        }
+        else if (Model.Status == InvoiceStatus.Overdue)
+        {
+            <div class="status-stamp overdue">OVERDUE</div>
+        }
+        
+        <!-- Header -->
+        <div class="header">
+            <div class="company-name">@Model.CompanyName</div>
+            <div class="company-details">
+                @if (!string.IsNullOrEmpty(Model.CompanyAddress))
+                {
+                    <div>@Model.CompanyAddress</div>
+                }
+                <div>Tel: @Model.CompanyPhone | Email: @Model.CompanyEmail</div>
+                @if (!string.IsNullOrEmpty(Model.CompanyTaxId))
+                {
+                    <div>Tax ID: @Model.CompanyTaxId</div>
+                }
+            </div>
+        </div>
+        
+        <!-- Invoice Title -->
+        <div class="invoice-title">INVOICE</div>
+        
+        <!-- Invoice Information Grid -->
+        <div class="invoice-info-grid">
+            <div class="invoice-info-row">
+                <div class="invoice-info-cell" style="width: 33%;">
+                    <strong>Invoice Number</strong>
+                    <div>@Model.InvoiceNumber</div>
+                </div>
+                <div class="invoice-info-cell" style="width: 33%;">
+                    <strong>Invoice Date</strong>
+                    <div>@Model.InvoiceDate.ToString("MMMM dd, yyyy")</div>
+                </div>
+                <div class="invoice-info-cell" style="width: 34%;">
+                    <strong>Due Date</strong>
+                    <div>@Model.DueDate.ToString("MMMM dd, yyyy")</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Address Section -->
+        <div class="address-section">
+            <div class="address-box">
+                <h3>Bill To:</h3>
+                <p><strong>@Model.CustomerName</strong></p>
+                @if (!string.IsNullOrEmpty(Model.CustomerCompany))
+                {
+                    <p>@Model.CustomerCompany</p>
+                }
+                @if (!string.IsNullOrEmpty(Model.CustomerAddress))
+                {
+                    <p>@Model.CustomerAddress</p>
+                }
+                @if (!string.IsNullOrEmpty(Model.CustomerCity))
+                {
+                    <p>@Model.CustomerCity, @Model.CustomerState @Model.CustomerZipCode</p>
+                }
+                @if (!string.IsNullOrEmpty(Model.CustomerCountry))
+                {
+                    <p>@Model.CustomerCountry</p>
+                }
+                @if (!string.IsNullOrEmpty(Model.CustomerEmail))
+                {
+                    <p>Email: @Model.CustomerEmail</p>
+                }
+                @if (!string.IsNullOrEmpty(Model.CustomerPhone))
+                {
+                    <p>Phone: @Model.CustomerPhone</p>
+                }
+            </div>
+            <div class="address-box">
+                <h3>Payment Information:</h3>
+                <p><strong>Payment Terms:</strong> @(Model.Terms ?? "Net 30 Days")</p>
+                <p><strong>Total Amount:</strong> @Model.TotalAmount.ToString("C")</p>
+                @if (Model.PaidAmount > 0)
+                {
+                    <p><strong>Amount Paid:</strong> @Model.PaidAmount.ToString("C")</p>
+                    <p><strong>Balance Due:</strong> @Model.BalanceAmount.ToString("C")</p>
+                }
+                else
+                {
+                    <p><strong>Amount Due:</strong> @Model.TotalAmount.ToString("C")</p>
+                }
+                <p><strong>Status:</strong> @Model.Status</p>
+            </div>
+        </div>
+        
+        <!-- Items Table -->
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th style="width: 5%;">#</th>
+                    <th style="width: 40%;">Description</th>
+                    <th class="text-center" style="width: 10%;">Qty</th>
+                    <th class="text-right" style="width: 12%;">Unit Price</th>
+                    <th class="text-right" style="width: 10%;">Tax</th>
+                    <th class="text-right" style="width: 10%;">Discount</th>
+                    <th class="text-right" style="width: 13%;">Line Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (int i = 0; i < Model.Items.Count; i++)
+                {
+                    var item = Model.Items[i];
+                    var taxAmount = item.UnitPrice * item.Quantity * item.TaxRate / 100;
+                    var discountAmount = Model.DiscountAmount > 0 ? (Model.DiscountAmount / Model.Items.Count) : 0;
+                    <tr>
+                        <td class="text-center">@(i + 1)</td>
+                        <td>
+                            <strong>@item.ProductName</strong>
+                            @if (!string.IsNullOrEmpty(item.Description))
+                            {
+                                <div class="description">@item.Description</div>
+                            }
+                        </td>
+                        <td class="text-center">@item.Quantity</td>
+                        <td class="text-right">@item.UnitPrice.ToString("C")</td>
+                        <td class="text-right">@taxAmount.ToString("C")</td>
+                        <td class="text-right">@(discountAmount > 0 ? discountAmount.ToString("C") : "-")</td>
+                        <td class="text-right"><strong>@item.LineTotal.ToString("C")</strong></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        
+        <!-- Totals Table -->
+        <table class="totals-table">
+            <thead style="display: none;">
+                <tr>
+                    <th scope="col">Description</th>
+                    <th scope="col">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td class="label">Subtotal:</td>
+                <td class="amount">@Model.SubTotal.ToString("C")</td>
+            </tr>
+            @if (Model.DiscountAmount > 0)
+            {
+                <tr>
+                    <td class="label">Discount:</td>
+                    <td class="amount">-@Model.DiscountAmount.ToString("C")</td>
+                </tr>
+            }
+            @if (Model.TaxAmount > 0)
+            {
+                <tr>
+                    <td class="label">Tax:</td>
+                    <td class="amount">@Model.TaxAmount.ToString("C")</td>
+                </tr>
+            }
+            <tr class="total-row">
+                <td class="label">Total Amount:</td>
+                <td class="amount">@Model.TotalAmount.ToString("C")</td>
+            </tr>
+            </tbody>
+        </table>
+        
+        <!-- Notes -->
+        @if (!string.IsNullOrEmpty(Model.Notes))
+        {
+            <div class="notes-section">
+                <h3>Notes / Additional Information:</h3>
+                <p>@Model.Notes</p>
+            </div>
+        }
+        
+        <!-- Payment Terms -->
+        @if (!string.IsNullOrEmpty(Model.Terms))
+        {
+            <div class="terms-section">
+                <h3>Payment Terms and Conditions:</h3>
+                <p>@Model.Terms</p>
+                <p style="margin-top: 10px;">
+                    Please make payment by the due date specified above. Late payments may be subject to interest charges.
+                </p>
+            </div>
+        }
+        
+        <!-- Signature Section -->
+        <div class="signature-section">
+            <div class="signature-box">
+                <div class="signature-line">Authorized Signature</div>
+            </div>
+            <div class="signature-box">
+                <div class="signature-line">Customer Signature</div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>Thank you for your business!</strong></p>
+            <p>For questions regarding this invoice, please contact @Model.CompanyEmail or call @Model.CompanyPhone</p>
+            <p style="margin-top: 10px; font-style: italic;">
+                This is a computer-generated invoice and is valid without signature.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
